@@ -124,28 +124,41 @@ static int ssd1351_init_device(const struct device *dev)
 
 static int ssd1351_blanking_on(const struct device *dev)
 {
-	// TODO blanking on command
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_DISPLAYOFF, true);
 }
 
 static int ssd1351_blanking_off(const struct device *dev)
 {
-	// TODO blanking off command
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_DISPLAYON, true);
 }
 
 static int ssd1351_write(const struct device *dev, const uint16_t x, const uint16_t y,
 		const struct display_buffer_descriptor *desc, const void *buf)
 {
 	const struct ssd1351_config *config = dev->config;
+
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_SETCOLUMN, true);
+	ssd1351_spi_write_byte(dev, x, false);
+	ssd1351_spi_write_byte(dev, x + desc->width - 1, false);
+
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_SETROW, true);
+	ssd1351_spi_write_byte(dev, y, false);
+	ssd1351_spi_write_byte(dev, y + desc->height - 1, false);
+
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_WRITERAM, true);
+
+	return ssd1351_spi_write_data(dev, buf, desc->buf_size, false);
 }
+
 
 static int ssd1351_set_brightness(const struct device *dev, const uint8_t brightness)
 {
-	// TODO set brightness
-}
+	uint8_t scaled = (brightness * 0x0F) / 100;
 
-static int ssd1351_set_contrast(const struct device *dev, const uint8_t contrast)
-{
-	// TODO set contrast
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_CONTRASTMASTER, true);
+	ssd1351_spi_write_byte(dev, scaled, false);
+
+	return 0;
 }
 
 static void ssd1351_get_capabilities(const struct device *dev, 
@@ -281,7 +294,6 @@ static const struct display_driver_api ssd1351_api = {
 	.blanking_off = ssd1351_blanking_off,
 	.write = ssd1351_write,
 	.set_brightness = ssd1351_set_brightness,
-	.set_contrast = ssd1351_set_contrast,
 	.get_capabilities = ssd1351_get_capabilities,
 	.set_orientation = ssd1351_set_orientation,
 };
