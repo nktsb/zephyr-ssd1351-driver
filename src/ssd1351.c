@@ -21,18 +21,13 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(display_ssd1351);
 
-typedef bool (*ssd1351_bus_ready_fn)(const struct device *dev);
-typedef int (*ssd1351_write_bus_fn)(const struct device *dev, uint8_t *buf, size_t len,
-				   bool command);
-
 struct ssd1351_config {
 	struct spi_dt_spec spi;
-	ssd1351_bus_ready_fn bus_ready;
-	ssd1351_write_bus_fn write_bus;
 	struct gpio_dt_spec data_cmd;
-	struct gpio_dt_spec reset_gpio;
+	struct gpio_dt_spec reset;
 	uint16_t width;
 	uint16_t height;
+	uint16_t rotation;
 };
 
 struct ssd1351_data {
@@ -43,18 +38,8 @@ struct ssd1351_data {
 	enum display_orientation orientation;
 };
 
-static bool ssd1351_bus_ready_spi(const struct device *dev)
-{
-	const struct ssd1351_config *config = dev->config;
-
-	if (gpio_pin_configure_dt(&config->data_cmd, GPIO_OUTPUT_INACTIVE) < 0) {
-		return false;
-	}
-
-	return spi_is_ready_dt(&config->bus.spi);
-}
-
-static int ssd1351_write_bus_spi(const struct device *dev, uint8_t *buf, size_t len, bool command)
+static int ssd1351_write_spi(const struct device *dev, uint8_t *buf, 
+		size_t len, bool command)
 {
 	const struct ssd1351_config *config = dev->config;
 	int ret;
@@ -64,33 +49,84 @@ static int ssd1351_write_bus_spi(const struct device *dev, uint8_t *buf, size_t 
 
 	struct spi_buf_set tx_bufs = {.buffers = &tx_buf, .count = 1};
 
-	ret = spi_write_dt(&config->bus.spi, &tx_bufs);
+	ret = spi_write_dt(&config->spi, &tx_bufs);
 
 	return ret;
 }
 
+static int ssd1351_init_device(const struct device *dev)
+{
+	
+}
+
 static int ssd1351_init(const struct device *dev)
 {
-	const struct ssd1351_config *cfg = dev->config;
+	const struct ssd1351_config *config = dev->config;
+	struct ssd1351_data *data = dev->data;
+	int ret;
 
-	if (cfg->rotation == 0) {
+	if (!gpio_is_ready_dt(&config->data_cmd))
+	{
+		LOG_ERR("D/C GPIO device not ready");
+		return -ENODEV;
+	}
+	ret = gpio_pin_configure_dt(&config->data_cmd, GPIO_OUTPUT_INACTIVE);
+	if (ret < 0)
+	{
+		LOG_ERR("Couldn't configure D/C pin");
+		return ret;
+	}
+
+	if (!spi_is_ready_dt(&config->spi))
+	{
+		LOG_ERR("SPI device not ready");
+		return -ENODEV;
+	}
+
+	if (config->reset.port)
+	{
+		if (!gpio_is_ready_dt(&config->reset))
+		{
+			LOG_ERR("Reset GPIO device not ready");
+			return -ENODEV;
+		}
+		ret = gpio_pin_configure_dt(&config->reset, GPIO_OUTPUT_INACTIVE);
+		if (ret < 0)
+		{
+			LOG_ERR("Couldn't configure reset pin");
+			return ret;
+		}
+	}
+
+	if (config->rotation == 0)
+	{
 		data->xres = cfg->width;
 		data->yres = cfg->height;
 		data->orientation = DISPLAY_ORIENTATION_NORMAL;
-	} else if (cfg->rotation == 90) {
+	}
+	else
+	if (config->rotation == 90)
+	{
 		data->xres = cfg->height;
 		data->yres = cfg->width;
 		data->orientation = DISPLAY_ORIENTATION_ROTATED_90;
-	} else if (cfg->rotation == 180) {
+	}
+	else
+	if (config->rotation == 180)
+	{
 		data->xres = cfg->width;
 		data->yres = cfg->height;
 		data->orientation = DISPLAY_ORIENTATION_ROTATED_180;
-	} else if (cfg->rotation == 270) {
+	}
+	else
+	if (config->rotation == 270)
+	{
 		data->xres = cfg->height;
 		data->yres = cfg->width;
 		data->orientation = DISPLAY_ORIENTATION_ROTATED_270;
 	}
 
+	ssd1351_init_device(dev);
 }
 
 static int ssd1351_blanking_on(const struct device *dev)
@@ -194,19 +230,18 @@ static DEVICE_API(display, ssd1351_api) = {
 
 
 #define SSD1351_DEFINE(node_id)															\
-	static const struct ssd1351_config ssd1351_config_##node_id = {						\
-		.spi = SPI_DT_SPEC_GET(															\
-				node_id, SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB | SPI_WORD_SET(8), 0)	\
-		.bus_ready = ssd1351_bus_ready_spi,												\
-		.write_bus = ssd1351_write_bus_spi,												\
-		.data_cmd = GPIO_DT_SPEC_GET_OR(node_id, dc_gpios, {0}),						\
-		.reset_gpio = GPIO_DT_SPEC_GET_OR(node_id, reset_gpios, {0}),					\
-		.height = DT_PROP(node_id, height),												\
-		.width = DT_PROP(node_id, width),												\	
-	};																					\
 	static struct ssd1351_data ssd1351_data_##inst = {									\
 		.pixel_format = DT_INST_PROP(inst, pixel_format),								\
 	};																					\
+	static const struct ssd1351_config ssd1351_config_##node_id = {						\
+		.spi = SPI_DT_SPEC_GET(															\
+				node_id, SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB | SPI_WORD_SET(8), 0)	\
+		.data_cmd = GPIO_DT_SPEC_GET_OR(node_id, dc_gpios, {0}),						\
+		.reset = GPIO_DT_SPEC_GET_OR(node_id, resets, {0}),								\
+		.height = DT_PROP(node_id, height),												\
+		.width = DT_PROP(node_id, width),												\
+		.rotation = DT_PROP(node_id, rotation)											\
+	};																					\											\
 	DEVICE_DT_DEFINE(node_id, ssd1351_init, NULL, &ssd1351_data_##inst,					\
 			&ssd1351_config_##node_id, POST_KERNEL, CONFIG_DISPLAY_INIT_PRIORITY,		\
 			&ssd1351_api);
