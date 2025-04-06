@@ -37,7 +37,7 @@ struct ssd1351_data {
 	enum display_orientation orientation;
 };
 
-static int ssd1351_write_spi(const struct device *dev, uint8_t *buf, 
+static int ssd1351_spi_write_data(const struct device *dev, uint8_t *buf, 
 		size_t len, bool command)
 {
 	const struct ssd1351_config *config = dev->config;
@@ -53,79 +53,73 @@ static int ssd1351_write_spi(const struct device *dev, uint8_t *buf,
 	return ret;
 }
 
-static int ssd1351_init_device(const struct device *dev)
-{
-	
-}
-
-static int ssd1351_init(const struct device *dev)
+static int ssd1351_spi_write_byte(const struct device *dev, uint8_t byte, bool command)
 {
 	const struct ssd1351_config *config = dev->config;
-	struct ssd1351_data *data = dev->data;
 	int ret;
 
-	if (!gpio_is_ready_dt(&config->data_cmd))
-	{
-		LOG_ERR("D/C GPIO device not ready");
-		return -ENODEV;
-	}
-	ret = gpio_pin_configure_dt(&config->data_cmd, GPIO_OUTPUT_INACTIVE);
-	if (ret < 0)
-	{
-		LOG_ERR("Couldn't configure D/C pin");
-		return ret;
-	}
+	gpio_pin_set_dt(&config->data_cmd, command ? 0 : 1);
+	struct spi_buf tx_buf = {.buf = &byte, .len = 1};
 
-	if (!spi_is_ready_dt(&config->spi))
-	{
-		LOG_ERR("SPI device not ready");
-		return -ENODEV;
-	}
+	struct spi_buf_set tx_bufs = {.buffers = &tx_buf, .count = 1};
 
-	if (config->reset.port)
-	{
-		if (!gpio_is_ready_dt(&config->reset))
-		{
-			LOG_ERR("Reset GPIO device not ready");
-			return -ENODEV;
-		}
-		ret = gpio_pin_configure_dt(&config->reset, GPIO_OUTPUT_INACTIVE);
-		if (ret < 0)
-		{
-			LOG_ERR("Couldn't configure reset pin");
-			return ret;
-		}
-	}
+	ret = spi_write_dt(&config->spi, &tx_bufs);
 
-	if (config->rotation == 0)
-	{
-		data->xres = config->width;
-		data->yres = config->height;
-		data->orientation = DISPLAY_ORIENTATION_NORMAL;
-	}
-	else
-	if (config->rotation == 90)
-	{
-		data->xres = config->height;
-		data->yres = config->width;
-		data->orientation = DISPLAY_ORIENTATION_ROTATED_90;
-	}
-	else
-	if (config->rotation == 180)
-	{
-		data->xres = config->width;
-		data->yres = config->height;
-		data->orientation = DISPLAY_ORIENTATION_ROTATED_180;
-	}
-	else
-	if (config->rotation == 270)
-	{
-		data->xres = config->height;
-		data->yres = config->width;
-		data->orientation = DISPLAY_ORIENTATION_ROTATED_270;
-	}
+	return ret;
+}
 
-	ssd1351_init_device(dev);
+static int ssd1351_init_device(const struct device *dev)
+{
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_COMMANDLOCK, true);
+	ssd1351_spi_write_byte(dev, 0x12, false);
+
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_COMMANDLOCK, true);
+	ssd1351_spi_write_byte(dev, 0xB1, false);
+
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_DISPLAYOFF, true);
+
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_CLOCKDIV, true);
+	ssd1351_spi_write_byte(dev, 0xF1, false);
+
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_MUXRATIO, true);
+	ssd1351_spi_write_byte(dev, 0x7F, false);
+
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_DISPLAYOFFSET, true);
+	ssd1351_spi_write_byte(dev, 0x00, false);
+
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_SETGPIO, true);
+	ssd1351_spi_write_byte(dev, 0x00, false);
+
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_FUNCTIONSELECT, true);
+	ssd1351_spi_write_byte(dev, 0x01, false);
+
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_PRECHARGE, true);
+	ssd1351_spi_write_byte(dev, 0x32, false);
+
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_VCOMH, true);
+	ssd1351_spi_write_byte(dev, 0x05, false);
+
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_NORMALDISPLAY, true);
+
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_CONTRASTABC, true);
+	ssd1351_spi_write_byte(dev, 0xC8, false);
+	ssd1351_spi_write_byte(dev, 0x80, false);
+	ssd1351_spi_write_byte(dev, 0xC8, false);
+
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_CONTRASTMASTER, true);
+	ssd1351_spi_write_byte(dev, 0x0F, false);
+
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_SETVSL, true);
+	ssd1351_spi_write_byte(dev, 0xA0, false);
+	ssd1351_spi_write_byte(dev, 0xB5, false);
+	ssd1351_spi_write_byte(dev, 0x55, false);
+
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_PRECHARGE2, true);
+	ssd1351_spi_write_byte(dev, 0x01, false);
+
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_DISPLAYON, true);
+
+	return 0;	
 }
 
 static int ssd1351_blanking_on(const struct device *dev)
@@ -176,34 +170,110 @@ static int ssd1351_set_orientation(const struct device *dev,
 	const struct ssd1351_config *config = dev->config;
 	struct ssd1351_data *data = dev->data;
 
-	data->orientation = orientation;
+	uint8_t madctl = 0b01100100; // 64K, enable split, CBA
 
 	if (orientation == DISPLAY_ORIENTATION_NORMAL)
 	{
+		madctl |= 0b00010000;
 		data->xres = config->width;
 		data->yres = config->height;
 	} 
 	else
 	if (orientation == DISPLAY_ORIENTATION_ROTATED_90)
 	{
+		madctl |= 0b00010011;
 		data->xres = config->height;
 		data->yres = config->width;
 	}
 	else
 	if (orientation == DISPLAY_ORIENTATION_ROTATED_180)
 	{
+		madctl |= 0b00000010;
 		data->xres = config->width;
 		data->yres = config->height;
 	}
 	else
 	if (orientation == DISPLAY_ORIENTATION_ROTATED_270)
 	{
+		madctl |= 0b00000001;
 		data->xres = config->height;
 		data->yres = config->width;
 	}
 
+	uint8_t startline = (orientation == DISPLAY_ORIENTATION_NORMAL ||
+		orientation == DISPLAY_ORIENTATION_ROTATED_90) ?
+		config->height : 0;
 
-	// TODO write orientation command
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_SETREMAP, true);
+	ssd1351_spi_write_byte(dev, startline, false);
+
+	data->orientation = orientation;
+
+	return 0;
+}
+
+
+static int ssd1351_init(const struct device *dev)
+{
+	const struct ssd1351_config *config = dev->config;
+	struct ssd1351_data *data = dev->data;
+	int ret;
+
+	if (!gpio_is_ready_dt(&config->data_cmd))
+	{
+		LOG_ERR("D/C GPIO device not ready");
+		return -ENODEV;
+	}
+	ret = gpio_pin_configure_dt(&config->data_cmd, GPIO_OUTPUT_INACTIVE);
+	if (ret < 0)
+	{
+		LOG_ERR("Couldn't configure D/C pin");
+		return ret;
+	}
+
+	if (!spi_is_ready_dt(&config->spi))
+	{
+		LOG_ERR("SPI device not ready");
+		return -ENODEV;
+	}
+
+	if (config->reset.port)
+	{
+		if (!gpio_is_ready_dt(&config->reset))
+		{
+			LOG_ERR("Reset GPIO device not ready");
+			return -ENODEV;
+		}
+		ret = gpio_pin_configure_dt(&config->reset, GPIO_OUTPUT_INACTIVE);
+		if (ret < 0)
+		{
+			LOG_ERR("Couldn't configure reset pin");
+			return ret;
+		}
+	}
+
+	ssd1351_init_device(dev);
+
+	if (config->rotation == 0)
+	{
+		ssd1351_set_orientation(dev, DISPLAY_ORIENTATION_NORMAL);
+	}
+	else
+	if (config->rotation == 90)
+	{
+		ssd1351_set_orientation(dev, DISPLAY_ORIENTATION_ROTATED_90);
+	}
+	else
+	if (config->rotation == 180)
+	{
+		ssd1351_set_orientation(dev, DISPLAY_ORIENTATION_ROTATED_180);
+	}
+	else
+	if (config->rotation == 270)
+	{
+		ssd1351_set_orientation(dev, DISPLAY_ORIENTATION_ROTATED_270);
+	}
+	return 0;
 }
 
 static const struct display_driver_api ssd1351_api = {
