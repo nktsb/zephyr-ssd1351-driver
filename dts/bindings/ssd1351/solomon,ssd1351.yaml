@@ -18,15 +18,13 @@ properties:
     required: false
     description: Optional reset GPIO
 
-  width:
+  rotation:
     type: int
-    required: false
-    default: 128
-    description: Display width in pixels
-
-  height:
-    type: int
-    required: false
-    default: 128
-    description: Display height in pixels
-
+    default: 0
+    enum:
+      - 0
+      - 90
+      - 180
+      - 270
+    description:
+      Display rotation (CW) in degrees. Defaults to 0, display default.
