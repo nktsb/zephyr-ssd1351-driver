@@ -5,7 +5,7 @@
  */
 
 
-#define DT_DRV_COMPAT sitronix_st7789v
+#define DT_DRV_COMPAT solomon_ssd1351
 
 #include "ssd1351.h"
 
@@ -17,7 +17,7 @@
 
 #define LOG_LEVEL CONFIG_DISPLAY_LOG_LEVEL
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(display_st7789v);
+LOG_MODULE_REGISTER(display_ssd1351);
 
 struct ssd1351_config {
 	struct spi_dt_spec spi;
