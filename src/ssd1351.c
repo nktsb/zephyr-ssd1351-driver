@@ -38,7 +38,7 @@ struct ssd1351_data {
 };
 
 static int ssd1351_spi_write_data(const struct device *dev, uint8_t *buf, 
-		size_t len, bool command)
+		const size_t len, bool command)
 {
 	const struct ssd1351_config *config = dev->config;
 	int ret;
@@ -135,8 +135,6 @@ static int ssd1351_blanking_off(const struct device *dev)
 static int ssd1351_write(const struct device *dev, const uint16_t x, const uint16_t y,
 		const struct display_buffer_descriptor *desc, const void *buf)
 {
-	const struct ssd1351_config *config = dev->config;
-
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_SETCOLUMN, true);
 	ssd1351_spi_write_byte(dev, x, false);
 	ssd1351_spi_write_byte(dev, x + desc->width - 1, false);
@@ -147,7 +145,9 @@ static int ssd1351_write(const struct device *dev, const uint16_t x, const uint1
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_WRITERAM, true);
 
-	return ssd1351_spi_write_data(dev, buf, desc->buf_size, false);
+	size_t buff_size = desc->buf_size;
+
+	return ssd1351_spi_write_data(dev, buf, buff_size, false);
 }
 
 
@@ -229,7 +229,6 @@ static int ssd1351_set_orientation(const struct device *dev,
 static int ssd1351_init(const struct device *dev)
 {
 	const struct ssd1351_config *config = dev->config;
-	struct ssd1351_data *data = dev->data;
 	int ret;
 
 	if (!gpio_is_ready_dt(&config->data_cmd))
