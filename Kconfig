@@ -9,5 +9,3 @@ menuconfig SSD1351
 	select SPI
 	help
 	  Enable driver for SSD1351 display driver.
-
-endmenu

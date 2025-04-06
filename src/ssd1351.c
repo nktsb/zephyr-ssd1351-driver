@@ -34,7 +34,6 @@ struct ssd1351_data {
 	uint16_t xres;
 	uint16_t yres;
 
-	enum display_pixel_format pixel_format;
 	enum display_orientation orientation;
 };
 
@@ -100,29 +99,29 @@ static int ssd1351_init(const struct device *dev)
 
 	if (config->rotation == 0)
 	{
-		data->xres = cfg->width;
-		data->yres = cfg->height;
+		data->xres = config->width;
+		data->yres = config->height;
 		data->orientation = DISPLAY_ORIENTATION_NORMAL;
 	}
 	else
 	if (config->rotation == 90)
 	{
-		data->xres = cfg->height;
-		data->yres = cfg->width;
+		data->xres = config->height;
+		data->yres = config->width;
 		data->orientation = DISPLAY_ORIENTATION_ROTATED_90;
 	}
 	else
 	if (config->rotation == 180)
 	{
-		data->xres = cfg->width;
-		data->yres = cfg->height;
+		data->xres = config->width;
+		data->yres = config->height;
 		data->orientation = DISPLAY_ORIENTATION_ROTATED_180;
 	}
 	else
 	if (config->rotation == 270)
 	{
-		data->xres = cfg->height;
-		data->yres = cfg->width;
+		data->xres = config->height;
+		data->yres = config->width;
 		data->orientation = DISPLAY_ORIENTATION_ROTATED_270;
 	}
 
@@ -143,8 +142,6 @@ static int ssd1351_write(const struct device *dev, const uint16_t x, const uint1
 		const struct display_buffer_descriptor *desc, const void *buf)
 {
 	const struct ssd1351_config *config = dev->config;
-	// switch(config->pixel_format)
-	// {} TODO handle two rgb formats
 }
 
 static int ssd1351_set_brightness(const struct device *dev, const uint8_t brightness)
@@ -157,7 +154,8 @@ static int ssd1351_set_contrast(const struct device *dev, const uint8_t contrast
 	// TODO set contrast
 }
 
-static void ssd1351_get_capabilities(const struct device *dev, struct display_capabilities *caps)
+static void ssd1351_get_capabilities(const struct device *dev, 
+		struct display_capabilities *capabilities)
 {
 	const struct ssd1351_config *config = dev->config;
 	struct ssd1351_data *data = dev->data;
@@ -166,84 +164,72 @@ static void ssd1351_get_capabilities(const struct device *dev, struct display_ca
 	capabilities->x_resolution = config->width;
 	capabilities->y_resolution = config->height;
 
-	capabilities->supported_pixel_formats = PIXEL_FORMAT_RGB_565 | PIXEL_FORMAT_RGB_888;
+	capabilities->supported_pixel_formats = PIXEL_FORMAT_RGB_565;
+	capabilities->current_pixel_format = PIXEL_FORMAT_RGB_565;
 
-	capabilities->current_pixel_format = data->pixel_format;
 	capabilities->current_orientation = data->orientation;
-}
-
-static int ssd1351_set_pixel_format(const struct device *dev,
-			     const enum display_pixel_format pixel_format)
-{
-	const struct ssd1351_config *config = dev->config;
-	struct ssd1351_data *data = dev->data;
-	config->pixel_format = pixel_format;
-
-	return 0;
 }
 
 static int ssd1351_set_orientation(const struct device *dev,
 			    const enum display_orientation orientation)
 {
+	const struct ssd1351_config *config = dev->config;
 	struct ssd1351_data *data = dev->data;
 
 	data->orientation = orientation;
 
 	if (orientation == DISPLAY_ORIENTATION_NORMAL)
 	{
-		data->xres = cfg->width;
-		data->yres = cfg->height;
+		data->xres = config->width;
+		data->yres = config->height;
 	} 
 	else
 	if (orientation == DISPLAY_ORIENTATION_ROTATED_90)
 	{
-		data->xres = cfg->height;
-		data->yres = cfg->width;
+		data->xres = config->height;
+		data->yres = config->width;
 	}
 	else
 	if (orientation == DISPLAY_ORIENTATION_ROTATED_180)
 	{
-		data->xres = cfg->width;
-		data->yres = cfg->height;
+		data->xres = config->width;
+		data->yres = config->height;
 	}
 	else
 	if (orientation == DISPLAY_ORIENTATION_ROTATED_270)
 	{
-		data->xres = cfg->height;
-		data->yres = cfg->width;
+		data->xres = config->height;
+		data->yres = config->width;
 	}
 
 
 	// TODO write orientation command
 }
 
-static DEVICE_API(display, ssd1351_api) = {
+static const struct display_driver_api ssd1351_api = {
 	.blanking_on = ssd1351_blanking_on,
 	.blanking_off = ssd1351_blanking_off,
 	.write = ssd1351_write,
 	.set_brightness = ssd1351_set_brightness,
 	.set_contrast = ssd1351_set_contrast,
 	.get_capabilities = ssd1351_get_capabilities,
-	.set_pixel_format = ssd1351_set_pixel_format,
 	.set_orientation = ssd1351_set_orientation,
 };
 
 
-#define SSD1351_DEFINE(node_id)															\
-	static struct ssd1351_data ssd1351_data_##inst = {									\
-		.pixel_format = DT_INST_PROP(inst, pixel_format),								\
+#define SSD1351_INIT(inst)																\
+	static struct ssd1351_data ssd1351_data_##inst;										\
+	static const struct ssd1351_config ssd1351_config_##inst = {						\
+		.spi = SPI_DT_SPEC_INST_GET(													\
+				inst, SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB | SPI_WORD_SET(8), 0),		\
+		.data_cmd = GPIO_DT_SPEC_INST_GET_OR(inst, dc_gpios, {0}),						\
+		.reset = GPIO_DT_SPEC_INST_GET_OR(inst, resets, {0}),							\
+		.height = DT_INST_PROP(inst, height),											\
+		.width = DT_INST_PROP(inst, width),												\
+		.rotation = DT_INST_PROP(inst, rotation)										\
 	};																					\
-	static const struct ssd1351_config ssd1351_config_##node_id = {						\
-		.spi = SPI_DT_SPEC_GET(															\
-				node_id, SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB | SPI_WORD_SET(8), 0)	\
-		.data_cmd = GPIO_DT_SPEC_GET_OR(node_id, dc_gpios, {0}),						\
-		.reset = GPIO_DT_SPEC_GET_OR(node_id, resets, {0}),								\
-		.height = DT_PROP(node_id, height),												\
-		.width = DT_PROP(node_id, width),												\
-		.rotation = DT_PROP(node_id, rotation)											\
-	};																					\											\
-	DEVICE_DT_DEFINE(node_id, ssd1351_init, NULL, &ssd1351_data_##inst,					\
-			&ssd1351_config_##node_id, POST_KERNEL, CONFIG_DISPLAY_INIT_PRIORITY,		\
+	DEVICE_DT_INST_DEFINE(inst, ssd1351_init, NULL, &ssd1351_data_##inst,				\
+			&ssd1351_config_##inst, POST_KERNEL, CONFIG_DISPLAY_INIT_PRIORITY,			\
 			&ssd1351_api);
 
-DT_INST_FOREACH_STATUS_OKAY(SSD1351_DEFINE)
+DT_INST_FOREACH_STATUS_OKAY(SSD1351_INIT)
