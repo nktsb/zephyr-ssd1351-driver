@@ -262,7 +262,12 @@ static int ssd1351_init(const struct device *dev)
 			LOG_ERR("Couldn't configure reset pin");
 			return ret;
 		}
+		k_msleep(1);
+		gpio_pin_set_dt(&config->reset, 1);
+		k_msleep(1);
+		gpio_pin_set_dt(&config->reset, 0);
 	}
+	k_msleep(200);
 
 	ssd1351_init_device(dev);
 
@@ -304,7 +309,7 @@ static const struct display_driver_api ssd1351_api = {
 		.spi = SPI_DT_SPEC_INST_GET(													\
 				inst, SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB | SPI_WORD_SET(8), 0),		\
 		.data_cmd = GPIO_DT_SPEC_INST_GET_OR(inst, dc_gpios, {0}),						\
-		.reset = GPIO_DT_SPEC_INST_GET_OR(inst, resets, {0}),							\
+		.reset = GPIO_DT_SPEC_INST_GET_OR(inst, reset_gpios, {0}),							\
 		.height = DT_INST_PROP(inst, height),											\
 		.width = DT_INST_PROP(inst, width),												\
 		.rotation = DT_INST_PROP(inst, rotation)										\
