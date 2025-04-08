@@ -256,19 +256,21 @@ static int ssd1351_write(const struct device *dev, const uint16_t x, const uint1
 
 	struct ssd1351_data *data = dev->data;
 
-	if(data->pixel_format == PIXEL_FORMAT_RGB_888)
+	if(data->pixel_format == PIXEL_FORMAT_RGB_888) // conversion RGB_888 -> RGB_666
 	{
 		int ret = 0;
+		uint8_t *buf_888 = (uint8_t*)buf;
+		size_t row_size = desc->width * 3;
+		uint8_t row_666[row_size];
+
 		for (size_t i = 0; i < desc->height; i++)
 		{
-			uint8_t row_666[desc->pitch];
-			for (size_t k = 0; k < sizeof(row_666); k++)
-			{
-				uint8_t val_888 = *((uint8_t*)buf + (i * desc->pitch + k));
-				row_666[k] = val_888 * 0x3F / 0xFF;
-			}
+			uint8_t *row_888 = buf_888 + (i * row_size);
 
-			ret = ssd1351_spi_write_data(dev, row_666, desc->pitch, false);
+			for (size_t k = 0; k < sizeof(row_666); k++)
+				row_666[k] = row_888[k] >> 2;
+
+			ret = ssd1351_spi_write_data(dev, row_666, sizeof(row_666), false);
 			if (ret)
 			{
 				return ret;
