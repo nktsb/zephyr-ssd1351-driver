@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: Apache-2.0
+
+description: Solomon SSD1351 RGB OLED 128x128 display controller over SPI
+
+compatible: "solomon,ssd1351"
+
+include: [spi-device.yaml, display-controller.yaml, lcd-controller.yaml]
+
+properties:
+
+  dc-gpios:
+    type: phandle-array
+    required: true
+    description: Data/Command control GPIO
+
+  reset-gpios:
+    type: phandle-array
+    required: false
+    description: Optional reset GPIO
+
+  rotation:
+    type: int
+    default: 0
+    enum:
+      - 0
+      - 90
+      - 180
+      - 270
+    description:
+      Display rotation (CW) in degrees. Defaults to 0, display default.
