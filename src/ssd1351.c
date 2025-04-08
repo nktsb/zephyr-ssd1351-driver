@@ -250,20 +250,14 @@ static void ssd1351_get_capabilities(const struct device *dev,
 	const struct ssd1351_config *config = dev->config;
 	struct ssd1351_data *data = dev->data;
 
+	if (capabilities == NULL) return;
+
 	memset(capabilities, 0, sizeof(struct display_capabilities));
 	capabilities->x_resolution = config->width;
 	capabilities->y_resolution = config->height;
 
-#ifdef CONFIG_SSD1351_RGB888
-	capabilities->supported_pixel_formats = PIXEL_FORMAT_RGB_888;
-	capabilities->current_pixel_format = PIXEL_FORMAT_RGB_888;
-#elif CONFIG_SSD1351_RGB565
-	capabilities->supported_pixel_formats = PIXEL_FORMAT_RGB_565;
-	capabilities->current_pixel_format = PIXEL_FORMAT_RGB_565;
-#elif CONFIG_SSD1351_BGR565	
-	capabilities->supported_pixel_formats = PIXEL_FORMAT_BGR_565;
-	capabilities->current_pixel_format = PIXEL_FORMAT_BGR_565;
-#endif
+	capabilities->supported_pixel_formats = data->pixel_format;
+	capabilities->current_pixel_format = data->pixel_format;
 
 	capabilities->current_orientation = data->orientation;
 }
