@@ -218,6 +218,12 @@ static int ssd1351_blanking_off(const struct device *dev)
 static int ssd1351_write(const struct device *dev, const uint16_t x, const uint16_t y,
 		const struct display_buffer_descriptor *desc, const void *buf)
 {
+	__ASSERT(desc->width <= desc->pitch, "Pitch is smaller than width");
+	__ASSERT((desc->pitch * data->bytes_per_pixel * desc->height) <= desc->buf_size,
+		 "Input buffer too small");
+
+	LOG_DBG("Writing %dx%d (w,h) @ %dx%d (x,y)", desc->width, desc->height, x, y);
+
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_SETCOLUMN, true);
 	ssd1351_spi_write_byte(dev, x, false);
 	ssd1351_spi_write_byte(dev, x + desc->width - 1, false);
@@ -253,6 +259,7 @@ static void ssd1351_get_capabilities(const struct device *dev,
 	if (capabilities == NULL) return;
 
 	memset(capabilities, 0, sizeof(struct display_capabilities));
+
 	capabilities->x_resolution = data->xres;
 	capabilities->y_resolution = data->yres;
 
