@@ -167,7 +167,7 @@ static int ssd1351_init_device(const struct device *dev,
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_DISPLAYOFF, true);
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_CLOCKDIV, true);
-	ssd1351_spi_write_byte(dev, 0xF1, false);
+	ssd1351_spi_write_byte(dev, 0xD0, false);
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_MUXRATIO, true);
 	ssd1351_spi_write_byte(dev, 0x7F, false);
