@@ -291,7 +291,6 @@ static void ssd1351_get_capabilities(const struct device *dev,
 static int ssd1351_set_orientation(const struct device *dev,
 			    const enum display_orientation orientation)
 {
-	const struct ssd1351_config *config = dev->config;
 	struct ssd1351_data *data = dev->data;
 
 	ssd1351_set_remap(dev, orientation, data->pixel_format);
