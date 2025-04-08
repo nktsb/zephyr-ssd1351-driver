@@ -254,7 +254,32 @@ static int ssd1351_write(const struct device *dev, const uint16_t x, const uint1
 
 	size_t buff_size = desc->buf_size;
 
-	return ssd1351_spi_write_data(dev, (uint8_t *)buf, buff_size, false);
+	struct ssd1351_data *data = dev->data;
+
+	if(data->pixel_format == PIXEL_FORMAT_RGB_888)
+	{
+		int ret = 0;
+		for (size_t i = 0; i < desc->height; i++)
+		{
+			uint8_t row_666[desc->pitch];
+			for (size_t k = 0; k < sizeof(row_666); k++)
+			{
+				uint8_t val_888 = *((uint8_t*)buf + (i * desc->pitch + k));
+				row_666[k] = val_888 * 0x3F / 0xFF;
+			}
+
+			ret = ssd1351_spi_write_data(dev, row_666, desc->pitch, false);
+			if (ret)
+			{
+				return ret;
+			}
+		}
+		return 0;
+	}
+	else
+	{
+		return ssd1351_spi_write_data(dev, (uint8_t *)buf, buff_size, false);
+	}
 }
 
 
