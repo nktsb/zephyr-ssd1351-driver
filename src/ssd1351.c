@@ -253,8 +253,8 @@ static void ssd1351_get_capabilities(const struct device *dev,
 	if (capabilities == NULL) return;
 
 	memset(capabilities, 0, sizeof(struct display_capabilities));
-	capabilities->x_resolution = config->width;
-	capabilities->y_resolution = config->height;
+	capabilities->x_resolution = data->xres;
+	capabilities->y_resolution = data->yres;
 
 	capabilities->supported_pixel_formats = data->pixel_format;
 	capabilities->current_pixel_format = data->pixel_format;
