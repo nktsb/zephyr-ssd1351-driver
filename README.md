@@ -1,5 +1,3 @@
-# zephyr-ssd1351-driver
-
 ## SSD1351 SPI Driver for Zephyr RTOS
 
 This is a Zephyr RTOS driver for the **Solomon SSD1351** OLED display (using SPI). It supports multiple pixel formats, custom grayscale for better display quality, and flicker-free operation.
