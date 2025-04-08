@@ -79,3 +79,7 @@ Note: RGB888 is converted to RGB666 due to the SSD1351's hardware limitations, a
 This driver has been developed and tested on the Waveshare 1.5-inch RGB OLED Display Module. You can find more information and purchase the module here.
 
 ![Описание изображения](demo/demo.gif)
+
+## Contributing
+
+Pull requests and issues are always welcome! Feel free to contribute to make this project better.

@@ -378,7 +378,6 @@ static int ssd1351_init(const struct device *dev)
 			LOG_ERR("Couldn't configure reset pin");
 			return ret;
 		}
-		k_msleep(1);
 		gpio_pin_set_dt(&config->reset, 1);
 		k_msleep(1);
 		gpio_pin_set_dt(&config->reset, 0);
