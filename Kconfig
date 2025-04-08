@@ -9,21 +9,3 @@ menuconfig SSD1351
 	select SPI
 	help
 	  Enable driver for SSD1351 display driver.
-
-choice SSD1351_PIXEL_FORMAT
-		prompt "Color pixel format"
-	default SSD1351_RGB565
-	depends on SSD1351
-	help
-		Specify the color pixel format for the SSD1351 display controller.
-
-config SSD1351_RGB888
-	bool "RGB888"
-
-config SSD1351_RGB565
-	bool "RGB565"
-
-config SSD1351_BGR565
-	bool "BGR565"
-
-endchoice

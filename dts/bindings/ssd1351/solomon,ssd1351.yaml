@@ -4,7 +4,7 @@ description: Solomon SSD1351 RGB OLED 128x128 display controller over SPI
 
 compatible: "solomon,ssd1351"
 
-include: [spi-device.yaml, display-controller.yaml]
+include: [spi-device.yaml, display-controller.yaml, lcd-controller.yaml]
 
 properties:
 
