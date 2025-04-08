@@ -254,10 +254,17 @@ static void ssd1351_get_capabilities(const struct device *dev,
 	capabilities->x_resolution = config->width;
 	capabilities->y_resolution = config->height;
 
-	capabilities->supported_pixel_formats = PIXEL_FORMAT_RGB_888 | PIXEL_FORMAT_RGB_565 |
-			PIXEL_FORMAT_BGR_565;
+#ifdef CONFIG_SSD1351_RGB888
+	capabilities->supported_pixel_formats = PIXEL_FORMAT_RGB_888;
+	capabilities->current_pixel_format = PIXEL_FORMAT_RGB_888;
+#elif CONFIG_SSD1351_RGB565
+	capabilities->supported_pixel_formats = PIXEL_FORMAT_RGB_565;
+	capabilities->current_pixel_format = PIXEL_FORMAT_RGB_565;
+#elif CONFIG_SSD1351_BGR565	
+	capabilities->supported_pixel_formats = PIXEL_FORMAT_BGR_565;
+	capabilities->current_pixel_format = PIXEL_FORMAT_BGR_565;
+#endif
 
-	capabilities->current_pixel_format = data->pixel_format;
 	capabilities->current_orientation = data->orientation;
 }
 
@@ -343,11 +350,13 @@ static int ssd1351_init(const struct device *dev)
 	}
 	k_msleep(200);
 
-	if (IS_ENABLED(CONFIG_SSD1351_RGB888)) data->pixel_format = PIXEL_FORMAT_RGB_888;
-	else
-	if (IS_ENABLED(CONFIG_SSD1351_RGB565)) data->pixel_format = PIXEL_FORMAT_RGB_565;
-	else
-	if (IS_ENABLED(CONFIG_SSD1351_BGR565)) data->pixel_format = PIXEL_FORMAT_BGR_565;
+#ifdef CONFIG_SSD1351_RGB888
+	data->pixel_format = PIXEL_FORMAT_RGB_888;
+#elif CONFIG_SSD1351_RGB565
+	data->pixel_format = PIXEL_FORMAT_RGB_565;
+#elif CONFIG_SSD1351_BGR565
+	data->pixel_format = PIXEL_FORMAT_BGR_565;
+#endif
 
 	switch(config->rotation)
 	{
