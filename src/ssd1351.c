@@ -121,9 +121,9 @@ static int ssd1351_set_remap(const struct device *dev,
 			break;
 	}
 
-	uint8_t startline = (orientation == DISPLAY_ORIENTATION_NORMAL ||
-		orientation == DISPLAY_ORIENTATION_ROTATED_90) ?
-		data->yres : 0;
+	uint8_t startline = (orientation == DISPLAY_ORIENTATION_NORMAL || 
+			orientation == DISPLAY_ORIENTATION_ROTATED_90) ?
+		config->height : 0;
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_SETREMAP, true);
 	ssd1351_spi_write_byte(dev, remap_mask, false);
