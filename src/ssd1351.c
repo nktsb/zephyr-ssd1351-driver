@@ -81,10 +81,10 @@ static int ssd1351_set_remap(const struct device *dev,
 	switch (pixel_format)
 	{
 		case PIXEL_FORMAT_RGB_888:
-			remap_mask |= 0b10000100;
+			remap_mask |= 0b10000000;
 			break;
 		case PIXEL_FORMAT_BGR_565:
-			remap_mask |= 0b01000000;
+			remap_mask |= 0b01000100;
 			break;
 		case PIXEL_FORMAT_RGB_565:
 		default:
