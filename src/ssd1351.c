@@ -256,7 +256,7 @@ static int ssd1351_write(const struct device *dev, const uint16_t x, const uint1
 
 	struct ssd1351_data *data = dev->data;
 
-	if(data->pixel_format == PIXEL_FORMAT_RGB_888) // conversion RGB_888 -> RGB_666
+	if (data->pixel_format == PIXEL_FORMAT_RGB_888) // conversion RGB_888 -> RGB_666
 	{
 		int ret = 0;
 		uint8_t *buf_888 = (uint8_t*)buf;
@@ -300,8 +300,6 @@ static void ssd1351_get_capabilities(const struct device *dev,
 {
 	struct ssd1351_data *data = dev->data;
 
-	if (capabilities == NULL) return;
-
 	memset(capabilities, 0, sizeof(struct display_capabilities));
 
 	capabilities->x_resolution = data->xres;
@@ -316,7 +314,7 @@ static void ssd1351_get_capabilities(const struct device *dev,
 }
 
 static int ssd1351_set_orientation(const struct device *dev,
-			    const enum display_orientation orientation)
+		const enum display_orientation orientation)
 {
 	struct ssd1351_data *data = dev->data;
 
@@ -326,7 +324,7 @@ static int ssd1351_set_orientation(const struct device *dev,
 }
 
 static int ssd1351_set_pixel_format(const struct device *dev,
-			    const enum display_pixel_format pixel_format)
+		const enum display_pixel_format pixel_format)
 {
 	struct ssd1351_data *data = dev->data;
 
@@ -419,20 +417,20 @@ static const struct display_driver_api ssd1351_api = {
 };
 
 
-#define SSD1351_INIT(inst)																\
-	static struct ssd1351_data ssd1351_data_##inst;										\
-	static const struct ssd1351_config ssd1351_config_##inst = {						\
-		.spi = SPI_DT_SPEC_INST_GET(													\
-				inst, SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB | SPI_WORD_SET(8), 0),		\
-		.data_cmd = GPIO_DT_SPEC_INST_GET_OR(inst, dc_gpios, {0}),						\
-		.reset = GPIO_DT_SPEC_INST_GET_OR(inst, reset_gpios, {0}),						\
-		.height = DT_INST_PROP(inst, height),											\
-		.width = DT_INST_PROP(inst, width),												\
-		.rotation = DT_INST_PROP(inst, rotation),										\
-		.pixel_format = DT_INST_PROP(inst, pixel_format)								\
-	};																					\
+#define SSD1351_INIT(inst)										\
+	static struct ssd1351_data ssd1351_data_##inst;							\
+	static const struct ssd1351_config ssd1351_config_##inst = {					\
+		.spi = SPI_DT_SPEC_INST_GET(								\
+				inst, SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB | SPI_WORD_SET(8), 0),	\
+		.data_cmd = GPIO_DT_SPEC_INST_GET_OR(inst, dc_gpios, {0}),				\
+		.reset = GPIO_DT_SPEC_INST_GET_OR(inst, reset_gpios, {0}),				\
+		.height = DT_INST_PROP(inst, height),							\
+	.width = DT_INST_PROP(inst, width),								\
+		.rotation = DT_INST_PROP(inst, rotation),						\
+		.pixel_format = DT_INST_PROP(inst, pixel_format)					\
+	};												\
 	DEVICE_DT_INST_DEFINE(inst, ssd1351_init, NULL, &ssd1351_data_##inst,				\
-			&ssd1351_config_##inst, POST_KERNEL, CONFIG_DISPLAY_INIT_PRIORITY,			\
+			&ssd1351_config_##inst, POST_KERNEL, CONFIG_DISPLAY_INIT_PRIORITY,		\
 			&ssd1351_api);
 
 DT_INST_FOREACH_STATUS_OKAY(SSD1351_INIT)
