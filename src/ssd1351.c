@@ -242,19 +242,22 @@ static int ssd1351_write(const struct device *dev, const uint16_t x, const uint1
 
 	LOG_DBG("Writing %dx%d (w,h) @ %dx%d (x,y)", desc->width, desc->height, x, y);
 
-	ssd1351_spi_write_byte(dev, SSD1351_CMD_SETCOLUMN, true);
+	struct ssd1351_data *data = dev->data;
+
+	bool coord_swap = data->orientation == DISPLAY_ORIENTATION_ROTATED_90 ||
+			data->orientation == DISPLAY_ORIENTATION_ROTATED_270 ? true : false;
+
+	ssd1351_spi_write_byte(dev, coord_swap? SSD1351_CMD_SETROW : SSD1351_CMD_SETCOLUMN, true);
 	ssd1351_spi_write_byte(dev, x, false);
 	ssd1351_spi_write_byte(dev, x + desc->width - 1, false);
 
-	ssd1351_spi_write_byte(dev, SSD1351_CMD_SETROW, true);
+	ssd1351_spi_write_byte(dev, coord_swap? SSD1351_CMD_SETCOLUMN : SSD1351_CMD_SETROW, true);
 	ssd1351_spi_write_byte(dev, y, false);
 	ssd1351_spi_write_byte(dev, y + desc->height - 1, false);
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_WRITERAM, true);
 
 	size_t buff_size = desc->buf_size;
-
-	struct ssd1351_data *data = dev->data;
 
 	if (data->pixel_format == PIXEL_FORMAT_RGB_888) // conversion RGB_888 -> RGB_666
 	{

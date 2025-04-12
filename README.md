@@ -9,7 +9,7 @@ This is a Zephyr RTOS driver for the **Solomon SSD1351** OLED display (using SPI
 - Custom grayscale table applied for improved display quality.
 - Flicker-free operation (including capturing the display with a phone camera, due to customized IC clock settings).
 - Compatible with the LVGL graphics library.
-- Rotation support (but 90 and 270-degree rotations are not working correctly with LVGL at the moment).
+- Rotation support.
 - Compatible with [Waveshare 1.5-inch RGB OLED Display Module](https://www.waveshare.com/1.5inch-rgb-oled-module.htm).
 
 ## Adding Driver To Zephyr Project
@@ -36,21 +36,23 @@ CONFIG_SSD1351=y
 
 ### Example SPI Configuration in Device Tree
 
-Ensure that the SPI interface is properly configured in the Device Tree. Below is an example configuration for the SPI1 interface:
+Ensure that the SPI interface is properly configured in the Device Tree. Below is an example configuration for the SPI3 interface:
 
 ```
-&spi1 {
+#include <zephyr/dt-bindings/display/panel.h>
+
+&spi3 {
     compatible = "nordic,nrf-spim";
     status = "okay";
-    pinctrl-0 = <&spi1_default>;
-    pinctrl-1 = <&spi1_sleep>;
+    pinctrl-0 = <&spi3_default>;
+    pinctrl-1 = <&spi3_sleep>;
     pinctrl-names = "default", "sleep";
     cs-gpios = <&gpio0 20 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 
     ssd1351: ssd1351@0 {
         status = "okay";
         compatible = "solomon,ssd1351";
-        spi-max-frequency = <32000000>;
+        spi-max-frequency = <24000000>;
         reg = <0>;
         reset-gpios = <&gpio0 6 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
         dc-gpios = <&gpio0 24 GPIO_ACTIVE_HIGH>;
