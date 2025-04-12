@@ -36,14 +36,16 @@ CONFIG_SSD1351=y
 
 ### Example SPI Configuration in Device Tree
 
-Ensure that the SPI interface is properly configured in the Device Tree. Below is an example configuration for the SPI1 interface:
+Ensure that the SPI interface is properly configured in the Device Tree. Below is an example configuration for the SPI3 interface:
 
 ```
-&spi1 {
+#include <zephyr/dt-bindings/display/panel.h>
+
+&spi3 {
     compatible = "nordic,nrf-spim";
     status = "okay";
-    pinctrl-0 = <&spi1_default>;
-    pinctrl-1 = <&spi1_sleep>;
+    pinctrl-0 = <&spi3_default>;
+    pinctrl-1 = <&spi3_sleep>;
     pinctrl-names = "default", "sleep";
     cs-gpios = <&gpio0 20 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 
