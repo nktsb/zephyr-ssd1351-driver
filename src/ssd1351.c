@@ -39,13 +39,12 @@ struct ssd1351_data {
 	enum display_pixel_format pixel_format;
 };
 
-static int ssd1351_spi_write_data(const struct device *dev, uint8_t *buf, 
-		size_t len, bool command)
+static int ssd1351_spi_write_data(const struct device *dev, uint8_t *buf, size_t len)
 {
 	const struct ssd1351_config *config = dev->config;
 	int ret;
 
-	gpio_pin_set_dt(&config->data_cmd, command ? 0 : 1);
+	gpio_pin_set_dt(&config->data_cmd, 1);
 	struct spi_buf tx_buf = {.buf = buf, .len = len};
 
 	struct spi_buf_set tx_bufs = {.buffers = &tx_buf, .count = 1};
@@ -197,7 +196,7 @@ static int ssd1351_init_device(const struct device *dev,
 	ssd1351_spi_write_byte(dev, 0x0F, false);
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_SETGRAY, true);
-	ssd1351_spi_write_data(dev, (uint8_t*)ssd1351_grayscale, sizeof(ssd1351_grayscale), false);
+	ssd1351_spi_write_data(dev, (uint8_t*)ssd1351_grayscale, sizeof(ssd1351_grayscale));
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_PRECHARGE, true);
 	ssd1351_spi_write_byte(dev, 0x32, false);
@@ -273,7 +272,7 @@ static int ssd1351_write(const struct device *dev, const uint16_t x, const uint1
 			for (size_t k = 0; k < sizeof(row_666); k++)
 				row_666[k] = row_888[k] >> 2;
 
-			ret = ssd1351_spi_write_data(dev, row_666, sizeof(row_666), false);
+			ret = ssd1351_spi_write_data(dev, row_666, sizeof(row_666));
 			if (ret)
 			{
 				return ret;
@@ -283,7 +282,7 @@ static int ssd1351_write(const struct device *dev, const uint16_t x, const uint1
 	}
 	else
 	{
-		return ssd1351_spi_write_data(dev, (uint8_t *)buf, buff_size, false);
+		return ssd1351_spi_write_data(dev, (uint8_t *)buf, buff_size);
 	}
 }
 
