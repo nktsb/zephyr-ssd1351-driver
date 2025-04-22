@@ -1,0 +1,11 @@
+# Copyright (c) 2025 Subbotin N.Y. <neymarus@yandex.ru>
+# GitHub: https://github.com/nktsb
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig SSD1351
+	bool "SSD1351 display driver"
+	default y
+	depends on DT_HAS_SOLOMON_SSD1351_ENABLED
+	select SPI
+	help
+	  Enable driver for SSD1351 display driver.
