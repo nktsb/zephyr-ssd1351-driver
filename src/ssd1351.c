@@ -39,7 +39,8 @@ struct ssd1351_data {
 	enum display_pixel_format pixel_format;
 };
 
-static int ssd1351_spi_write_data(const struct device *dev, uint8_t *buf, size_t len)
+static int ssd1351_spi_write_data(const struct device *dev, uint8_t *buf, 
+				  size_t len)
 {
 	const struct ssd1351_config *config = dev->config;
 	int ret;
@@ -55,7 +56,8 @@ static int ssd1351_spi_write_data(const struct device *dev, uint8_t *buf, size_t
 	return ret;
 }
 
-static int ssd1351_spi_write_byte(const struct device *dev, uint8_t byte, bool command)
+static int ssd1351_spi_write_byte(const struct device *dev, uint8_t byte, 
+		bool command)
 {
 	const struct ssd1351_config *config = dev->config;
 	int ret;
@@ -198,7 +200,8 @@ static int ssd1351_init_device(const struct device *dev,
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_SETGRAY, true);
 
-	ssd1351_spi_write_data(dev, (uint8_t*)ssd1351_grayscale, sizeof(ssd1351_grayscale));
+	ssd1351_spi_write_data(dev, (uint8_t*)ssd1351_grayscale, 
+			sizeof(ssd1351_grayscale));
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_PRECHARGE, true);
 	ssd1351_spi_write_byte(dev, 0x32, false);
@@ -219,7 +222,7 @@ static int ssd1351_init_device(const struct device *dev,
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_NORMALDISPLAY, true);
 
-	ssd1351_spi_write_byte(dev, SSD1351_CMD_DISPLAYON, true);
+	// ssd1351_spi_write_byte(dev, SSD1351_CMD_DISPLAYON, true);
 
 	return 0;
 }
@@ -234,12 +237,15 @@ static int ssd1351_blanking_off(const struct device *dev)
 	return ssd1351_spi_write_byte(dev, SSD1351_CMD_DISPLAYON, true);
 }
 
-static int ssd1351_write(const struct device *dev, const uint16_t x, const uint16_t y,
-			 const struct display_buffer_descriptor *desc, const void *buf)
+static int ssd1351_write(const struct device *dev, const uint16_t x, 
+			 const uint16_t y,
+			 const struct display_buffer_descriptor *desc, 
+			 const void *buf)
 {
 	struct ssd1351_data *data = dev->data;
 
-	uint8_t bytes_per_pixel = (data->pixel_format == PIXEL_FORMAT_RGB_888)? 3 : 2;
+	uint8_t bytes_per_pixel = 
+			(data->pixel_format == PIXEL_FORMAT_RGB_888)? 3 : 2;
 
 	__ASSERT(desc->width <= desc->pitch, "Pitch is smaller than width");
 	__ASSERT((desc->pitch * bytes_per_pixel * desc->height) <= desc->buf_size,
@@ -250,11 +256,13 @@ static int ssd1351_write(const struct device *dev, const uint16_t x, const uint1
 	bool coord_swap = data->orientation == DISPLAY_ORIENTATION_ROTATED_90 ||
 	data->orientation == DISPLAY_ORIENTATION_ROTATED_270 ? true : false;
 
-	ssd1351_spi_write_byte(dev, coord_swap? SSD1351_CMD_SETROW : SSD1351_CMD_SETCOLUMN, true);
+	ssd1351_spi_write_byte(dev, coord_swap? 
+			SSD1351_CMD_SETROW : SSD1351_CMD_SETCOLUMN, true);
 	ssd1351_spi_write_byte(dev, x, false);
 	ssd1351_spi_write_byte(dev, x + desc->width - 1, false);
 
-	ssd1351_spi_write_byte(dev, coord_swap? SSD1351_CMD_SETCOLUMN : SSD1351_CMD_SETROW, true);
+	ssd1351_spi_write_byte(dev, coord_swap? 
+			SSD1351_CMD_SETCOLUMN : SSD1351_CMD_SETROW, true);
 	ssd1351_spi_write_byte(dev, y, false);
 	ssd1351_spi_write_byte(dev, y + desc->height - 1, false);
 
@@ -275,7 +283,8 @@ static int ssd1351_write(const struct device *dev, const uint16_t x, const uint1
 			for (size_t k = 0; k < sizeof(row_666); k++)
 			row_666[k] = row_888[k] >> 2;
 
-			ret = ssd1351_spi_write_data(dev, row_666, sizeof(row_666));
+			ret = ssd1351_spi_write_data(dev, row_666, 
+					sizeof(row_666));
 
 			if (ret) {
 				return ret;
@@ -288,7 +297,8 @@ static int ssd1351_write(const struct device *dev, const uint16_t x, const uint1
 }
 
 
-static int ssd1351_set_brightness(const struct device *dev, const uint8_t brightness)
+static int ssd1351_set_brightness(const struct device *dev, 
+				  const uint8_t brightness)
 {
 	uint8_t scaled = brightness >> 4;
 
@@ -331,8 +341,10 @@ static int ssd1351_set_pixel_format(const struct device *dev,
 {
 	struct ssd1351_data *data = dev->data;
 
-	if (pixel_format != PIXEL_FORMAT_RGB_565 && pixel_format != PIXEL_FORMAT_RGB_888 &&
+	if (pixel_format != PIXEL_FORMAT_RGB_565 && pixel_format != 
+			PIXEL_FORMAT_RGB_888 && 
 			pixel_format != PIXEL_FORMAT_BGR_565) {
+
 		LOG_ERR("Unsupported pixel format");
 		return -ENOTSUP;
 	}
