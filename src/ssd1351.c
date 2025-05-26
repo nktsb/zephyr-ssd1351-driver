@@ -169,7 +169,7 @@ static int ssd1351_init_device(const struct device *dev,
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_DISPLAYOFF, true);
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_CLOCKDIV, true);
-	ssd1351_spi_write_byte(dev, 0xD0, false);
+	ssd1351_spi_write_byte(dev, 0xF0, false);
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_MUXRATIO, true);
 	ssd1351_spi_write_byte(dev, 0x7F, false);
@@ -258,13 +258,15 @@ static int ssd1351_write(const struct device *dev, const uint16_t x,
 
 	ssd1351_spi_write_byte(dev, coord_swap? 
 			SSD1351_CMD_SETROW : SSD1351_CMD_SETCOLUMN, true);
-	ssd1351_spi_write_byte(dev, x, false);
-	ssd1351_spi_write_byte(dev, x + desc->width - 1, false);
+
+	uint8_t x_buff[] = {x, x + desc->width - 1};
+	ssd1351_spi_write_data(dev, x_buff, sizeof(x_buff));
 
 	ssd1351_spi_write_byte(dev, coord_swap? 
 			SSD1351_CMD_SETCOLUMN : SSD1351_CMD_SETROW, true);
-	ssd1351_spi_write_byte(dev, y, false);
-	ssd1351_spi_write_byte(dev, y + desc->height - 1, false);
+
+	uint8_t y_buff[] = {y, y + desc->height - 1};
+	ssd1351_spi_write_data(dev, y_buff, sizeof(y_buff));
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_WRITERAM, true);
 
