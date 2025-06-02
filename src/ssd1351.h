@@ -8,6 +8,9 @@
 #define SSD1351_DISPLAY_DRIVER_H__
 
 #include <zephyr/kernel.h>
+#include <zephyr/drivers/display.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/spi.h>
 
 #define SSD1351_CMD_SETCOLUMN		0x15
 #define SSD1351_CMD_SETROW		0x75
