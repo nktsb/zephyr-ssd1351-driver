@@ -21,24 +21,6 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(display_ssd1351);
 
-struct ssd1351_config {
-	struct spi_dt_spec spi;
-	struct gpio_dt_spec data_cmd;
-	struct gpio_dt_spec reset;
-	uint16_t width;
-	uint16_t height;
-	uint16_t rotation;
-	uint8_t pixel_format;
-};
-
-struct ssd1351_data {
-	uint16_t xres;
-	uint16_t yres;
-
-	enum display_orientation orientation;
-	enum display_pixel_format pixel_format;
-};
-
 static int ssd1351_spi_write_data(const struct device *dev, uint8_t *buf, 
 				  size_t len)
 {
