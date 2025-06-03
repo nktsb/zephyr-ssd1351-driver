@@ -186,18 +186,18 @@ static int ssd1351_init_device(const struct device *dev,
 			sizeof(ssd1351_grayscale));
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_PRECHARGE, true);
-	ssd1351_spi_write_byte(dev, 0x32, false);
+	ssd1351_spi_write_byte(dev, 0x64, false);
+
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_PRECHARGE2, true);
+	ssd1351_spi_write_byte(dev, 0x02, false);
+
+	ssd1351_spi_write_byte(dev, SSD1351_CMD_PRECHARGELEVEL, true);
+	ssd1351_spi_write_byte(dev, 0x17, false);
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_DISPLAYENHANCE, true);
 	ssd1351_spi_write_byte(dev, 0xA4, false);
 	ssd1351_spi_write_byte(dev, 0x00, false);
 	ssd1351_spi_write_byte(dev, 0x00, false);
-
-	ssd1351_spi_write_byte(dev, SSD1351_CMD_PRECHARGELEVEL, true);
-	ssd1351_spi_write_byte(dev, 0x17, false);
-
-	ssd1351_spi_write_byte(dev, SSD1351_CMD_PRECHARGE2, true);
-	ssd1351_spi_write_byte(dev, 0x01, false);
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_VCOMH, true);
 	ssd1351_spi_write_byte(dev, 0x05, false);
@@ -284,7 +284,7 @@ static int ssd1351_write(const struct device *dev, const uint16_t x,
 static int ssd1351_set_brightness(const struct device *dev, 
 				  const uint8_t brightness)
 {
-	uint8_t scaled = brightness >> 4;
+	uint8_t scaled = brightness * 0x0F / 100;
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_CONTRASTMASTER, true);
 	ssd1351_spi_write_byte(dev, scaled, false);
