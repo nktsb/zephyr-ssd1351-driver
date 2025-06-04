@@ -186,7 +186,7 @@ static int ssd1351_init_device(const struct device *dev,
 			sizeof(ssd1351_grayscale));
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_PRECHARGE, true);
-	ssd1351_spi_write_byte(dev, 0x64, false);
+	ssd1351_spi_write_byte(dev, 0x84, false);
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_PRECHARGE2, true);
 	ssd1351_spi_write_byte(dev, 0x02, false);
