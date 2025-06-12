@@ -374,25 +374,7 @@ static int ssd1351_init(const struct device *dev)
 	}
 	k_msleep(200);
 
-	enum display_orientation orientation;
-
-	switch(config->rotation) {
-		case 90:
-			orientation = DISPLAY_ORIENTATION_ROTATED_90;
-			break;
-		case 180:
-			orientation = DISPLAY_ORIENTATION_ROTATED_180;
-			break;
-		case 270:
-			orientation = DISPLAY_ORIENTATION_ROTATED_270;
-			break;
-		case 0:
-		default:
-			orientation = DISPLAY_ORIENTATION_NORMAL;
-			break;
-	}
-
-	ssd1351_init_device(dev, orientation, config->pixel_format);
+	ssd1351_init_device(dev, config->orientation, config->pixel_format);
 
 	return 0;
 }
@@ -417,7 +399,7 @@ static const struct display_driver_api ssd1351_api = {
 		.reset = GPIO_DT_SPEC_INST_GET_OR(inst, reset_gpios, {0}),		\
 		.height = DT_INST_PROP(inst, height),					\
 		.width = DT_INST_PROP(inst, width),					\
-		.rotation = DT_INST_PROP(inst, rotation),				\
+		.orientation = DT_INST_ENUM_IDX(inst, rotation),			\
 		.pixel_format = DT_INST_PROP(inst, pixel_format)			\
 	};										\
 	DEVICE_DT_INST_DEFINE(inst, ssd1351_init, NULL, &ssd1351_data_##inst,		\
