@@ -151,7 +151,7 @@ static int ssd1351_init_device(const struct device *dev,
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_DISPLAYOFF, true);
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_CLOCKDIV, true);
-	ssd1351_spi_write_byte(dev, 0xF0, false);
+	ssd1351_spi_write_byte(dev, 0xF1, false);
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_MUXRATIO, true);
 	ssd1351_spi_write_byte(dev, 0x7F, false);
@@ -186,10 +186,10 @@ static int ssd1351_init_device(const struct device *dev,
 			sizeof(ssd1351_grayscale));
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_PRECHARGE, true);
-	ssd1351_spi_write_byte(dev, 0x84, false);
+	ssd1351_spi_write_byte(dev, 0x32, false);
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_PRECHARGE2, true);
-	ssd1351_spi_write_byte(dev, 0x02, false);
+	ssd1351_spi_write_byte(dev, 0x01, false);
 
 	ssd1351_spi_write_byte(dev, SSD1351_CMD_PRECHARGELEVEL, true);
 	ssd1351_spi_write_byte(dev, 0x17, false);
