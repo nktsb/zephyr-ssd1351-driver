@@ -16,6 +16,7 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/spi.h>
 #include <zephyr/kernel.h>
+#include <zephyr/pm/device.h>
 
 #define LOG_LEVEL CONFIG_DISPLAY_LOG_LEVEL
 #include <zephyr/logging/log.h>
@@ -379,6 +380,42 @@ static int ssd1351_init(const struct device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_DEVICE
+static int ssd1351_pm_action(const struct device *dev,
+			     enum pm_device_action action)
+{
+	int ret = 0;
+	const struct ssd1351_config *config = dev->config;
+	const struct spi_cs_control *cs = &config->spi.config.cs;
+
+	switch (action) {
+	case PM_DEVICE_ACTION_RESUME:
+		gpio_pin_configure_dt(&config->data_cmd, GPIO_OUTPUT_INACTIVE);
+		gpio_pin_configure_dt(&config->reset, GPIO_OUTPUT_INACTIVE);
+
+		if (cs != NULL && gpio_is_ready_dt(&cs->gpio))
+		{
+			gpio_pin_configure_dt(&cs->gpio, GPIO_OUTPUT_INACTIVE);
+		}
+		break;
+	case PM_DEVICE_ACTION_SUSPEND:
+		gpio_pin_configure_dt(&config->data_cmd, GPIO_DISCONNECTED);
+		gpio_pin_configure_dt(&config->reset, GPIO_DISCONNECTED);
+
+		if (cs != NULL && gpio_is_ready_dt(&cs->gpio))
+		{
+			gpio_pin_configure_dt(&cs->gpio, GPIO_DISCONNECTED);
+		}
+		break;
+	default:
+		ret = -ENOTSUP;
+		break;
+	}
+
+	return ret;
+}
+#endif /* CONFIG_PM_DEVICE */
+
 static const struct display_driver_api ssd1351_api = {
 	.blanking_on = ssd1351_blanking_on,
 	.blanking_off = ssd1351_blanking_off,
@@ -402,7 +439,9 @@ static const struct display_driver_api ssd1351_api = {
 		.orientation = DT_INST_ENUM_IDX(inst, rotation),			\
 		.pixel_format = DT_INST_PROP(inst, pixel_format)			\
 	};										\
-	DEVICE_DT_INST_DEFINE(inst, ssd1351_init, NULL, &ssd1351_data_##inst,		\
+	PM_DEVICE_DT_INST_DEFINE(inst, ssd1351_pm_action);				\
+	DEVICE_DT_INST_DEFINE(inst, ssd1351_init, PM_DEVICE_DT_INST_GET(inst),		\
+			      &ssd1351_data_##inst,					\
 			      &ssd1351_config_##inst, POST_KERNEL,			\
 			      CONFIG_DISPLAY_INIT_PRIORITY,				\
 			      &ssd1351_api);
