@@ -54,12 +54,19 @@ struct ssd1351_config {
 	
 	uint16_t width;
 	uint16_t height;
-
 };
 
 struct ssd1351_data {
+	int (*write_pixel_cb)(const struct device* dev, 
+			      const struct display_buffer_descriptor *desc,
+			      const uint8_t *buf);
+
 	uint16_t xres;
 	uint16_t yres;
+
+	uint8_t x_cmd;
+	uint8_t y_cmd;
+	uint8_t bytes_per_pixel;
 
 	enum display_orientation orientation;
 	enum display_pixel_format pixel_format;
