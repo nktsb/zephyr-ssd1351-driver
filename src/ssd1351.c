@@ -13,8 +13,10 @@
 #include <zephyr/drivers/display.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/mipi_dbi.h>
+#include <zephyr/drivers/spi.h>
 #include <zephyr/init.h>
 #include <zephyr/kernel.h>
+#include <zephyr/pm/device.h>
 
 #define LOG_LEVEL CONFIG_DISPLAY_LOG_LEVEL
 #include <zephyr/logging/log.h>
@@ -273,6 +275,57 @@ static void ssd1351_reset_display(const struct device *dev)
 	k_msleep(200);
 }
 
+#ifdef CONFIG_PM_DEVICE
+static int ssd1351_pm_action(const struct device* dev,
+			     enum pm_device_action action)
+{
+	const struct ssd1351_config* config = dev->config;
+
+	const struct spi_cs_control* cs = &config->dbi_config.config.cs;
+
+	switch (action)
+	{
+		case PM_DEVICE_ACTION_RESUME:
+			if (gpio_is_ready_dt(&config->data_cmd))
+				gpio_pin_configure_dt(&config->data_cmd,
+						      GPIO_OUTPUT_INACTIVE);
+
+			if (gpio_is_ready_dt(&config->reset))
+				gpio_pin_configure_dt(&config->reset,
+						      GPIO_OUTPUT_INACTIVE);
+
+			if (cs != NULL && gpio_is_ready_dt(&cs->gpio))
+				gpio_pin_configure_dt(&cs->gpio,
+						      GPIO_OUTPUT_INACTIVE);
+
+			ssd1351_blanking_off(dev);
+
+			break;
+		case PM_DEVICE_ACTION_SUSPEND:
+
+			ssd1351_blanking_on(dev);
+
+			if (gpio_is_ready_dt(&config->data_cmd))
+				gpio_pin_configure_dt(&config->data_cmd,
+						      GPIO_DISCONNECTED);
+
+			if (gpio_is_ready_dt(&config->reset))
+				gpio_pin_configure_dt(&config->reset,
+						      GPIO_DISCONNECTED);
+
+			if (cs != NULL && gpio_is_ready_dt(&cs->gpio))
+				gpio_pin_configure_dt(&cs->gpio,
+						      GPIO_DISCONNECTED);
+
+			break;
+		default:
+			return -ENOTSUP;
+			break;
+	}
+	return 0;
+}
+#endif /* CONFIG_PM_DEVICE */
+
 static int ssd1351_init(const struct device* dev)
 {
 	const struct ssd1351_config* config = dev->config;
@@ -310,8 +363,12 @@ static const struct display_driver_api ssd1351_api = {
 		.height = DT_INST_PROP(inst, height),				\
 		.width = DT_INST_PROP(inst, width),				\
 		.orientation = DT_INST_ENUM_IDX(inst, rotation),		\
-		.pixel_format = DT_INST_PROP(inst, pixel_format)};		\
-	DEVICE_DT_INST_DEFINE(inst, ssd1351_init, NULL,				\
+		.pixel_format = DT_INST_PROP(inst, pixel_format),		\
+		.data_cmd = GPIO_DT_SPEC_GET_OR(DT_INST_PARENT(inst), dc_gpios, {0}),	\
+		.reset = GPIO_DT_SPEC_GET_OR(DT_INST_PARENT(inst), reset_gpios, {0}),	\
+	};									\
+	PM_DEVICE_DT_INST_DEFINE(inst, ssd1351_pm_action);			\
+	DEVICE_DT_INST_DEFINE(inst, ssd1351_init, PM_DEVICE_DT_INST_GET(inst),	\
 			      &ssd1351_data_##inst, &ssd1351_config_##inst,	\
 			      POST_KERNEL, CONFIG_DISPLAY_INIT_PRIORITY,	\
 			      &ssd1351_api);

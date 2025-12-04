@@ -47,6 +47,8 @@
 struct ssd1351_config {
 	const struct device *mipi_dbi;
 	const struct mipi_dbi_config dbi_config;
+	struct gpio_dt_spec data_cmd;
+	struct gpio_dt_spec reset;
 
 	enum display_orientation orientation;
 	enum display_pixel_format pixel_format;
