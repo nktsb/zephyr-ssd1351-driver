@@ -12,67 +12,30 @@
 #include <zephyr/device.h>
 #include <zephyr/drivers/display.h>
 #include <zephyr/drivers/gpio.h>
-#include <zephyr/drivers/spi.h>
+#include <zephyr/drivers/mipi_dbi.h>
 #include <zephyr/init.h>
 #include <zephyr/kernel.h>
-#include <zephyr/pm/device.h>
 
 #define LOG_LEVEL CONFIG_DISPLAY_LOG_LEVEL
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(display_ssd1351);
 
-static int ssd1351_spi_write_data(const struct device* dev, uint8_t* buf,
-				  size_t len)
+static int ssd1351_mipi_transmit_byte(const struct device *dev, uint8_t cmd, uint8_t byte)
 {
-	const struct ssd1351_config* config = dev->config;
+	const struct ssd1351_config *config = dev->config;
 
-	gpio_pin_set_dt(&config->data_cmd, 1);
-
-	struct spi_buf tx_buf = {
-		.buf = buf,
-		.len = len,
-	};
-
-	struct spi_buf_set tx_bufs = {
-		.buffers = &tx_buf,
-		.count = 1,
-	};
-
-	return spi_write_dt(&config->spi, &tx_bufs);
+	return mipi_dbi_command_write(config->mipi_dbi, &config->dbi_config, cmd,
+			       &byte, sizeof(byte));
 }
 
-static int ssd1351_spi_write_cmd(const struct device* dev, uint8_t cmd)
+static int ssd1351_mipi_transmit(const struct device *dev, uint8_t cmd,
+			     const uint8_t* tx_data, size_t tx_len)
 {
-	const struct ssd1351_config* config = dev->config;
+	const struct ssd1351_config *config = dev->config;
 
-	gpio_pin_set_dt(&config->data_cmd, 0);
-
-	struct spi_buf tx_buf = {
-		.buf = &cmd,
-		.len = 1,
-	};
-
-	struct spi_buf_set tx_bufs = {
-		.buffers = &tx_buf,
-		.count = 1,
-	};
-
-	return spi_write_dt(&config->spi, &tx_bufs);
+	return mipi_dbi_command_write(config->mipi_dbi, &config->dbi_config, cmd,
+			       tx_data, tx_len);
 }
-
-static int ssd1351_spi_write_byte(const struct device* dev, uint8_t byte)
-{
-	return ssd1351_spi_write_data(dev, &byte, sizeof(uint8_t));
-}
-
-static int ssd1351_write_pixel(const struct device* dev,
-			       const struct display_buffer_descriptor* desc,
-			       const uint8_t* buf);
-
-static int
-ssd1351_write_pixel_via_conversion(const struct device* dev,
-				   const struct display_buffer_descriptor* desc,
-				   const uint8_t* buf);
 
 static int ssd1351_set_remap(const struct device* dev,
 			     enum display_orientation orientation,
@@ -85,22 +48,14 @@ static int ssd1351_set_remap(const struct device* dev,
 
 	switch (pixel_format)
 	{
-		case PIXEL_FORMAT_RGB_888:
-			remap_mask |= 0b10000100;
-			data->bytes_per_pixel = 3;
-			data->write_pixel_cb =
-				ssd1351_write_pixel_via_conversion;
-			break;
 		case PIXEL_FORMAT_BGR_565:
 			remap_mask |= 0b01000000;
 			data->bytes_per_pixel = 2;
-			data->write_pixel_cb = ssd1351_write_pixel;
 			break;
 		case PIXEL_FORMAT_RGB_565:
 		default:
 			remap_mask |= 0b01000100;
 			data->bytes_per_pixel = 2;
-			data->write_pixel_cb = ssd1351_write_pixel;
 			break;
 	}
 
@@ -146,10 +101,8 @@ static int ssd1351_set_remap(const struct device* dev,
 				    config->height :
 				    0;
 
-	ssd1351_spi_write_cmd(dev, SSD1351_CMD_SETREMAP);
-	ssd1351_spi_write_byte(dev, remap_mask);
-	ssd1351_spi_write_cmd(dev, SSD1351_CMD_STARTLINE);
-	ssd1351_spi_write_byte(dev, startline);
+	ssd1351_mipi_transmit(dev, SSD1351_CMD_SETREMAP, &remap_mask, sizeof(remap_mask));
+	ssd1351_mipi_transmit(dev, SSD1351_CMD_STARTLINE, &startline, sizeof(startline));
 
 	data->orientation = orientation;
 	data->pixel_format = pixel_format;
@@ -169,119 +122,64 @@ static int ssd1351_init_device(const struct device* dev,
 			       enum display_orientation orientation,
 			       enum display_pixel_format pixel_format)
 {
-	ssd1351_spi_write_cmd(dev, SSD1351_CMD_COMMANDLOCK);
-	ssd1351_spi_write_byte(dev, 0x12);
+	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_COMMANDLOCK, 0x12);
 
-	ssd1351_spi_write_cmd(dev, SSD1351_CMD_COMMANDLOCK);
-	ssd1351_spi_write_byte(dev, 0xB1);
+	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_COMMANDLOCK, 0xB1);
 
-	ssd1351_spi_write_cmd(dev, SSD1351_CMD_DISPLAYOFF);
+	ssd1351_mipi_transmit(dev, SSD1351_CMD_DISPLAYOFF, NULL, 0);
 
-	ssd1351_spi_write_cmd(dev, SSD1351_CMD_CLOCKDIV);
-	ssd1351_spi_write_byte(dev, 0xF0);
+	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_CLOCKDIV, 0xD0);
 
-	ssd1351_spi_write_cmd(dev, SSD1351_CMD_MUXRATIO);
-	ssd1351_spi_write_byte(dev, 0x7F);
+	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_MUXRATIO, 0x7F);
 
-	ssd1351_spi_write_cmd(dev, SSD1351_CMD_DISPLAYOFFSET);
-	ssd1351_spi_write_byte(dev, 0x00);
+	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_DISPLAYOFFSET, 0x00);
 
 	ssd1351_set_remap(dev, orientation, pixel_format);
 
-	ssd1351_spi_write_cmd(dev, SSD1351_CMD_SETGPIO);
-	ssd1351_spi_write_byte(dev, 0x00);
+	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_SETGPIO, 0x00);
 
-	ssd1351_spi_write_cmd(dev, SSD1351_CMD_FUNCTIONSELECT);
-	ssd1351_spi_write_byte(dev, 0x01);
+	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_FUNCTIONSELECT, 0x01);
 
-	ssd1351_spi_write_cmd(dev, SSD1351_CMD_SETVSL);
-	ssd1351_spi_write_byte(dev, 0xA0);
-	ssd1351_spi_write_byte(dev, 0xB5);
-	ssd1351_spi_write_byte(dev, 0x55);
+	uint8_t cmd_buf[3] = {0xA0, 0xB5, 0x55};
+	ssd1351_mipi_transmit(dev, SSD1351_CMD_SETVSL, cmd_buf, sizeof(cmd_buf));
 
-	ssd1351_spi_write_cmd(dev, SSD1351_CMD_CONTRASTABC);
-	ssd1351_spi_write_byte(dev, 0xC8);
-	ssd1351_spi_write_byte(dev, 0x80);
-	ssd1351_spi_write_byte(dev, 0xC8);
+	// cmd_buf[0] = 0xC8;
+	// cmd_buf[1] = 0x80;
+	// cmd_buf[2] = 0xC8;
+	// ssd1351_mipi_transmit(dev, SSD1351_CMD_CONTRASTABC, cmd_buf, sizeof(cmd_buf));
 
-	ssd1351_spi_write_cmd(dev, SSD1351_CMD_CONTRASTMASTER);
-	ssd1351_spi_write_byte(dev, 0x0F);
+	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_CONTRASTMASTER, 0x0F);
 
-	ssd1351_spi_write_cmd(dev, SSD1351_CMD_SETGRAY);
+	// ssd1351_mipi_transmit(dev, SSD1351_CMD_SETGRAY, ssd1351_grayscale, sizeof(ssd1351_grayscale));
 
-	ssd1351_spi_write_data(dev, (uint8_t*)ssd1351_grayscale,
-			       sizeof(ssd1351_grayscale));
+	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_PRECHARGE, 0x80);
 
-	ssd1351_spi_write_cmd(dev, SSD1351_CMD_PRECHARGE);
-	ssd1351_spi_write_byte(dev, 0x84);
+	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_PRECHARGE2, 0x80);
 
-	ssd1351_spi_write_cmd(dev, SSD1351_CMD_PRECHARGE2);
-	ssd1351_spi_write_byte(dev, 0x02);
+	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_PRECHARGELEVEL, 0x80);
 
-	ssd1351_spi_write_cmd(dev, SSD1351_CMD_PRECHARGELEVEL);
-	ssd1351_spi_write_byte(dev, 0x17);
+	// cmd_buf[0] = 0xA4;
+	// cmd_buf[1] = 0x00;
+	// cmd_buf[2] = 0x00;
+	// ssd1351_mipi_transmit(dev, SSD1351_CMD_DISPLAYENHANCE, cmd_buf, sizeof(cmd_buf));
 
-	ssd1351_spi_write_cmd(dev, SSD1351_CMD_DISPLAYENHANCE);
-	ssd1351_spi_write_byte(dev, 0xA4);
-	ssd1351_spi_write_byte(dev, 0x00);
-	ssd1351_spi_write_byte(dev, 0x00);
+	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_VCOMH, 0x3E);
 
-	ssd1351_spi_write_cmd(dev, SSD1351_CMD_VCOMH);
-	ssd1351_spi_write_byte(dev, 0x05);
+	ssd1351_mipi_transmit(dev, SSD1351_CMD_NORMALDISPLAY, NULL, 0);
 
-	ssd1351_spi_write_cmd(dev, SSD1351_CMD_NORMALDISPLAY);
-
-	// ssd1351_spi_write_cmd(dev, SSD1351_CMD_DISPLAYON);
+	// ssd1351_mipi_transmit(dev, SSD1351_CMD_DISPLAYON, NULL, 0);
 
 	return 0;
 }
 
 static int ssd1351_blanking_on(const struct device* dev)
 {
-	return ssd1351_spi_write_cmd(dev, SSD1351_CMD_DISPLAYOFF);
+	return ssd1351_mipi_transmit(dev, SSD1351_CMD_DISPLAYOFF, NULL, 0);
 }
 
 static int ssd1351_blanking_off(const struct device* dev)
 {
-	return ssd1351_spi_write_cmd(dev, SSD1351_CMD_DISPLAYON);
-}
-
-static int ssd1351_write_pixel(const struct device* dev,
-			       const struct display_buffer_descriptor* desc,
-			       const uint8_t* buf)
-{
-	return ssd1351_spi_write_data(dev, (uint8_t*)buf,
-				      (size_t)desc->buf_size);
-}
-
-static int
-ssd1351_write_pixel_via_conversion(const struct device* dev,
-				   const struct display_buffer_descriptor* desc,
-				   const uint8_t* buf)
-{
-	struct ssd1351_data* data = dev->data;
-
-	int ret = 0;
-
-	uint8_t* buf_888 = (uint8_t*)buf;
-	size_t row_size = desc->width * data->bytes_per_pixel;
-	uint8_t row_666[row_size];
-
-	for (size_t i = 0; i < desc->height; i++)
-	{
-		uint8_t* row_888 = buf_888 + (i * row_size);
-
-		for (size_t k = 0; k < sizeof(row_666); k++)
-			row_666[k] = row_888[k] >> 2;
-
-		ret = ssd1351_spi_write_data(dev, row_666, sizeof(row_666));
-
-		if (ret)
-		{
-			return ret;
-		}
-	}
-	return 0;
+	return ssd1351_mipi_transmit(dev, SSD1351_CMD_DISPLAYON, NULL, 0);
 }
 
 static int ssd1351_write(const struct device* dev, const uint16_t x,
@@ -289,6 +187,7 @@ static int ssd1351_write(const struct device* dev, const uint16_t x,
 			 const struct display_buffer_descriptor* desc,
 			 const void* buf)
 {
+	const struct ssd1351_config *config = dev->config;
 	struct ssd1351_data* data = dev->data;
 
 	__ASSERT(desc->width <= desc->pitch, "Pitch is smaller than width");
@@ -299,20 +198,17 @@ static int ssd1351_write(const struct device* dev, const uint16_t x,
 	LOG_DBG("Writing %dx%d (w,h) @ %dx%d (x,y)", desc->width, desc->height,
 		x, y);
 
+	struct display_buffer_descriptor mipi_desc = *desc;
+
 	uint8_t x_buff[] = {x, x + desc->width - 1};
 	uint8_t y_buff[] = {y, y + desc->height - 1};
 
-	ssd1351_spi_write_cmd(dev, data->x_cmd);
-	ssd1351_spi_write_data(dev, x_buff, sizeof(x_buff));
+	ssd1351_mipi_transmit(dev, data->x_cmd, x_buff, sizeof(x_buff));
+	ssd1351_mipi_transmit(dev, data->y_cmd, y_buff, sizeof(y_buff));
+	ssd1351_mipi_transmit(dev, SSD1351_CMD_WRITERAM, NULL, 0);
 
-	ssd1351_spi_write_cmd(dev, data->y_cmd);
-	ssd1351_spi_write_data(dev, y_buff, sizeof(y_buff));
-
-	ssd1351_spi_write_cmd(dev, SSD1351_CMD_WRITERAM);
-
-	__ASSERT(data->write_pixel_cb != NULL, "Got NULL write_pixel_cb!");
-
-	return data->write_pixel_cb(dev, desc, (const uint8_t*)buf);
+	return mipi_dbi_write_display(config->mipi_dbi, &config->dbi_config, buf, &mipi_desc,
+				     data->pixel_format);
 }
 
 static int ssd1351_set_brightness(const struct device* dev,
@@ -320,8 +216,7 @@ static int ssd1351_set_brightness(const struct device* dev,
 {
 	uint8_t scaled = brightness * 0x0F / 100;
 
-	ssd1351_spi_write_cmd(dev, SSD1351_CMD_CONTRASTMASTER);
-	ssd1351_spi_write_byte(dev, scaled);
+	ssd1351_mipi_transmit(dev, SSD1351_CMD_CONTRASTMASTER, &scaled, sizeof(scaled));
 
 	return 0;
 }
@@ -336,8 +231,7 @@ static void ssd1351_get_capabilities(const struct device* dev,
 	capabilities->x_resolution = data->xres;
 	capabilities->y_resolution = data->yres;
 
-	capabilities->supported_pixel_formats = PIXEL_FORMAT_RGB_888 |
-						PIXEL_FORMAT_RGB_565 |
+	capabilities->supported_pixel_formats = PIXEL_FORMAT_RGB_565 |
 						PIXEL_FORMAT_BGR_565;
 
 	capabilities->current_pixel_format = data->pixel_format;
@@ -362,7 +256,6 @@ ssd1351_set_pixel_format(const struct device* dev,
 	struct ssd1351_data* data = dev->data;
 
 	if (pixel_format != PIXEL_FORMAT_RGB_565 &&
-	    pixel_format != PIXEL_FORMAT_RGB_888 &&
 	    pixel_format != PIXEL_FORMAT_BGR_565)
 	{
 
@@ -375,96 +268,37 @@ ssd1351_set_pixel_format(const struct device* dev,
 	return 0;
 }
 
+static void ssd1351_reset_display(const struct device *dev)
+{
+	const struct ssd1351_config *config = dev->config;
+	int ret;
+
+	LOG_DBG("Resetting display");
+
+	ret = mipi_dbi_reset(config->mipi_dbi, 6);
+	if (ret < 0) {
+		LOG_ERR("Can't reset displa [%d]", ret);
+		return;
+	}
+	k_msleep(200);
+}
+
 static int ssd1351_init(const struct device* dev)
 {
 	const struct ssd1351_config* config = dev->config;
-	int ret;
 
-	if (!gpio_is_ready_dt(&config->data_cmd))
+	if (!device_is_ready(config->mipi_dbi))
 	{
-		LOG_ERR("D/C GPIO device not ready");
-		return -ENODEV;
-	}
-	ret = gpio_pin_configure_dt(&config->data_cmd, GPIO_OUTPUT_INACTIVE);
-	if (ret < 0)
-	{
-		LOG_ERR("Couldn't configure D/C pin");
-		return ret;
-	}
-
-	if (!spi_is_ready_dt(&config->spi))
-	{
-		LOG_ERR("SPI device not ready");
+		LOG_ERR("MIPI device not ready");
 		return -ENODEV;
 	}
 
-	if (config->reset.port)
-	{
-		if (!gpio_is_ready_dt(&config->reset))
-		{
-			LOG_ERR("Reset GPIO device not ready");
-			return -ENODEV;
-		}
-		ret = gpio_pin_configure_dt(&config->reset,
-					    GPIO_OUTPUT_INACTIVE);
-		if (ret < 0)
-		{
-			LOG_ERR("Couldn't configure reset pin");
-			return ret;
-		}
-		gpio_pin_set_dt(&config->reset, 1);
-		k_msleep(1);
-		gpio_pin_set_dt(&config->reset, 0);
-	}
-	k_msleep(200);
+	ssd1351_reset_display(dev);
 
 	ssd1351_init_device(dev, config->orientation, config->pixel_format);
 
 	return 0;
 }
-
-#ifdef CONFIG_PM_DEVICE
-static int ssd1351_pm_action(const struct device* dev,
-			     enum pm_device_action action)
-{
-	int ret = 0;
-	const struct ssd1351_config* config = dev->config;
-	const struct spi_cs_control* cs = &config->spi.config.cs;
-
-	switch (action)
-	{
-		case PM_DEVICE_ACTION_RESUME:
-			gpio_pin_configure_dt(&config->data_cmd,
-					      GPIO_OUTPUT_INACTIVE);
-			gpio_pin_configure_dt(&config->reset,
-					      GPIO_OUTPUT_INACTIVE);
-
-			if (cs != NULL && gpio_is_ready_dt(&cs->gpio))
-			{
-				gpio_pin_configure_dt(&cs->gpio,
-						      GPIO_OUTPUT_INACTIVE);
-			}
-			break;
-		case PM_DEVICE_ACTION_SUSPEND:
-			gpio_pin_configure_dt(&config->data_cmd,
-					      GPIO_DISCONNECTED);
-			gpio_pin_configure_dt(&config->reset,
-					      GPIO_DISCONNECTED);
-
-			if (cs != NULL && gpio_is_ready_dt(&cs->gpio))
-			{
-				gpio_pin_configure_dt(&cs->gpio,
-						      GPIO_DISCONNECTED);
-			}
-			break;
-		default:
-			ret = -ENOTSUP;
-			break;
-	}
-
-	return ret;
-}
-#endif /* CONFIG_PM_DEVICE */
 
 static const struct display_driver_api ssd1351_api = {
 	.blanking_on = ssd1351_blanking_on,
@@ -476,26 +310,20 @@ static const struct display_driver_api ssd1351_api = {
 	.set_orientation = ssd1351_set_orientation,
 };
 
-#define SSD1351_INIT(inst)                                                     \
-	static struct ssd1351_data ssd1351_data_##inst = {                     \
-		.write_pixel_cb = ssd1351_write_pixel,                         \
-	};                                                                     \
-	static const struct ssd1351_config ssd1351_config_##inst = {           \
-		.spi = SPI_DT_SPEC_INST_GET(inst,                              \
-					    SPI_OP_MODE_MASTER |               \
-						    SPI_TRANSFER_MSB |         \
-						    SPI_WORD_SET(8),           \
-					    0),                                \
-		.data_cmd = GPIO_DT_SPEC_INST_GET_OR(inst, dc_gpios, {0}),     \
-		.reset = GPIO_DT_SPEC_INST_GET_OR(inst, reset_gpios, {0}),     \
-		.height = DT_INST_PROP(inst, height),                          \
-		.width = DT_INST_PROP(inst, width),                            \
-		.orientation = DT_INST_ENUM_IDX(inst, rotation),               \
-		.pixel_format = DT_INST_PROP(inst, pixel_format)};             \
-	PM_DEVICE_DT_INST_DEFINE(inst, ssd1351_pm_action);                     \
-	DEVICE_DT_INST_DEFINE(inst, ssd1351_init, PM_DEVICE_DT_INST_GET(inst), \
-			      &ssd1351_data_##inst, &ssd1351_config_##inst,    \
-			      POST_KERNEL, CONFIG_DISPLAY_INIT_PRIORITY,       \
+#define SSD1351_INIT(inst)							\
+	static struct ssd1351_data ssd1351_data_##inst;				\
+	static const struct ssd1351_config ssd1351_config_##inst = {		\
+		.mipi_dbi = DEVICE_DT_GET(DT_INST_PARENT(inst)),		\
+		.dbi_config = MIPI_DBI_CONFIG_DT_INST(inst,			\
+						      SPI_WORD_SET(8) |		\
+						      SPI_OP_MODE_MASTER, 0),	\
+		.height = DT_INST_PROP(inst, height),				\
+		.width = DT_INST_PROP(inst, width),				\
+		.orientation = DT_INST_ENUM_IDX(inst, rotation),		\
+		.pixel_format = DT_INST_PROP(inst, pixel_format)};		\
+	DEVICE_DT_INST_DEFINE(inst, ssd1351_init, NULL,				\
+			      &ssd1351_data_##inst, &ssd1351_config_##inst,	\
+			      POST_KERNEL, CONFIG_DISPLAY_INIT_PRIORITY,	\
 			      &ssd1351_api);
 
 DT_INST_FOREACH_STATUS_OKAY(SSD1351_INIT)
