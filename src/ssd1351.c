@@ -128,8 +128,6 @@ static int ssd1351_init_device(const struct device* dev,
 
 	ssd1351_mipi_transmit(dev, SSD1351_CMD_DISPLAYOFF, NULL, 0);
 
-	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_CLOCKDIV, 0xD0);
-
 	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_MUXRATIO, 0x7F);
 
 	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_DISPLAYOFFSET, 0x00);
@@ -143,31 +141,23 @@ static int ssd1351_init_device(const struct device* dev,
 	uint8_t cmd_buf[3] = {0xA0, 0xB5, 0x55};
 	ssd1351_mipi_transmit(dev, SSD1351_CMD_SETVSL, cmd_buf, sizeof(cmd_buf));
 
-	// cmd_buf[0] = 0xC8;
-	// cmd_buf[1] = 0x80;
-	// cmd_buf[2] = 0xC8;
-	// ssd1351_mipi_transmit(dev, SSD1351_CMD_CONTRASTABC, cmd_buf, sizeof(cmd_buf));
-
 	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_CONTRASTMASTER, 0x0F);
 
 	// ssd1351_mipi_transmit(dev, SSD1351_CMD_SETGRAY, ssd1351_grayscale, sizeof(ssd1351_grayscale));
+	ssd1351_mipi_transmit(dev, SSD1351_CMD_USELUT, NULL, 0);
 
-	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_PRECHARGE, 0x80);
+	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_CLOCKDIV, 0xF0);
+	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_PRECHARGE, 0xFF);
+	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_PRECHARGE2, 0x0F);
+	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_PRECHARGELEVEL, 0x00);
+	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_VCOMH, 0x06);
 
-	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_PRECHARGE2, 0x80);
-
-	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_PRECHARGELEVEL, 0x80);
-
-	// cmd_buf[0] = 0xA4;
-	// cmd_buf[1] = 0x00;
-	// cmd_buf[2] = 0x00;
-	// ssd1351_mipi_transmit(dev, SSD1351_CMD_DISPLAYENHANCE, cmd_buf, sizeof(cmd_buf));
-
-	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_VCOMH, 0x3E);
+	cmd_buf[0] = 0x8A;
+	cmd_buf[1] = 0x51;
+	cmd_buf[2] = 0x8A;
+	ssd1351_mipi_transmit(dev, SSD1351_CMD_CONTRASTABC, cmd_buf, sizeof(cmd_buf));
 
 	ssd1351_mipi_transmit(dev, SSD1351_CMD_NORMALDISPLAY, NULL, 0);
-
-	// ssd1351_mipi_transmit(dev, SSD1351_CMD_DISPLAYON, NULL, 0);
 
 	return 0;
 }
