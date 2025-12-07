@@ -2,10 +2,10 @@
 # GitHub: https://github.com/nktsb
 # SPDX-License-Identifier: Apache-2.0
 
-menuconfig SSD1351
+menuconfig SSD1351_CUSTOM
 	bool "SSD1351 display driver"
 	default y
-	depends on DT_HAS_SOLOMON_SSD1351_ENABLED
+	depends on DT_HAS_SOLOMON_SSD1351_CUSTOM_ENABLED
 	select MIPI_DBI
 	help
-	  Enable driver for SSD1351 display driver.
+	  Enable driver for SSD1351 custom display driver.

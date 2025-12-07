@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define DT_DRV_COMPAT solomon_ssd1351
+#define DT_DRV_COMPAT solomon_ssd1351_custom
 
 #include "ssd1351.h"
 
@@ -20,7 +20,7 @@
 
 #define LOG_LEVEL CONFIG_DISPLAY_LOG_LEVEL
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(display_ssd1351);
+LOG_MODULE_REGISTER(display_ssd1351_custom);
 
 static int ssd1351_mipi_transmit_byte(const struct device *dev, uint8_t cmd, uint8_t byte)
 {
