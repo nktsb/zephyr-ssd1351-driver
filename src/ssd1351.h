@@ -10,7 +10,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/display.h>
 #include <zephyr/drivers/gpio.h>
-#include <zephyr/drivers/spi.h>
+#include <zephyr/drivers/mipi_dbi.h>
 
 #define SSD1351_CMD_SETCOLUMN		0x15
 #define SSD1351_CMD_SETROW		0x75
@@ -45,21 +45,25 @@
 #define SSD1351_CMD_STARTSCROLL		0x9F
 
 struct ssd1351_config {
-	struct spi_dt_spec spi;
+	const struct device *mipi_dbi;
+	const struct mipi_dbi_config dbi_config;
 	struct gpio_dt_spec data_cmd;
 	struct gpio_dt_spec reset;
-	
+
 	enum display_orientation orientation;
 	enum display_pixel_format pixel_format;
 	
 	uint16_t width;
 	uint16_t height;
-
 };
 
 struct ssd1351_data {
 	uint16_t xres;
 	uint16_t yres;
+
+	uint8_t x_cmd;
+	uint8_t y_cmd;
+	uint8_t bytes_per_pixel;
 
 	enum display_orientation orientation;
 	enum display_pixel_format pixel_format;
