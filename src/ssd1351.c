@@ -150,8 +150,8 @@ static int ssd1351_init_device(const struct device* dev,
 			      sizeof(ssd1351_grayscale));
 	// ssd1351_mipi_transmit(dev, SSD1351_CMD_USELUT, NULL, 0);
 
-	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_CLOCKDIV, 0xD0);
-	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_PRECHARGE, 0xFF);
+	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_CLOCKDIV, 0xC0);
+	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_PRECHARGE, 0xFA);
 	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_PRECHARGE2, 0x0F);
 	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_PRECHARGELEVEL, 0x0B);
 	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_VCOMH, 0x05);
