@@ -31,7 +31,7 @@ Add the following configuration options to your prj.conf to enable SPI and the S
 ```
 CONFIG_SPI=y
 CONFIG_DISPLAY=y
-CONFIG_SSD1351=y
+CONFIG_SSD1351_CUSTOM=y
 ```
 
 ### Example SPI Configuration in Device Tree
@@ -51,7 +51,7 @@ Ensure that the SPI interface is properly configured in the Device Tree. Below i
 
     ssd1351: ssd1351@0 {
         status = "okay";
-        compatible = "solomon,ssd1351";
+        compatible = "solomon,ssd1351-custom";
         spi-max-frequency = <24000000>;
         reg = <0>;
         reset-gpios = <&gpio0 6 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
