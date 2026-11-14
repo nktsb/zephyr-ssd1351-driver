@@ -81,7 +81,7 @@ property is needed in the device tree.
 
 This driver has been developed and tested on the Waveshare 1.5-inch RGB OLED Display Module. You can find more information and purchase the module here.
 
-![Описание изображения](demo/demo.gif)
+![Demo](https://github.com/user-attachments/assets/1df2cd21-0d97-42f2-a18a-506bcc30c2fc)
 
 ## Contributing
 
