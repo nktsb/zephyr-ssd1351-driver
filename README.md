@@ -38,8 +38,8 @@ CONFIG_SSD1351_CUSTOM=y
 
 Ensure that the SPI interface is properly configured in the Device Tree. Below is an example configuration for the SPI3 interface:
 
-```
-#include <zephyr/dt-bindings/display/panel.h>
+```dts
+#include <zephyr/dt-bindings/gpio/gpio.h>
 
 &spi3 {
     compatible = "nordic,nrf-spim";
@@ -48,37 +48,40 @@ Ensure that the SPI interface is properly configured in the Device Tree. Below i
     pinctrl-1 = <&spi3_sleep>;
     pinctrl-names = "default", "sleep";
     cs-gpios = <&gpio0 20 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+};
 
-    ssd1351: ssd1351@0 {
-        status = "okay";
-        compatible = "solomon,ssd1351-custom";
-        spi-max-frequency = <24000000>;
-        reg = <0>;
+/ {
+    mipi_dbi {
+        compatible = "zephyr,mipi-dbi-spi";
+        spi-dev = <&spi3>;
+        write-only;
         reset-gpios = <&gpio0 6 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
         dc-gpios = <&gpio0 24 GPIO_ACTIVE_HIGH>;
-        width = <128>;
-        height = <128>;
-        rotation = <0>;
-        pixel-format = <PANEL_PIXEL_FORMAT_RGB_888>;
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        ssd1351: ssd1351@0 {
+            compatible = "solomon,ssd1351-custom";
+            mipi-max-frequency = <16000000>;
+            mipi-mode = "MIPI_DBI_MODE_SPI_4WIRE";
+            reg = <0>;
+            width = <128>;
+            height = <128>;
+            rotation = <0>;
+        };
     };
 };
 ```
 
-The following pixel formats are supported:
-
-```
-PANEL_PIXEL_FORMAT_RGB565
-PANEL_PIXEL_FORMAT_BGR565
-PANEL_PIXEL_FORMAT_RGB888
-``` 
-
-Note: RGB888 is converted to RGB666 due to the SSD1351's hardware limitations, as it doesn't support full 888 color depth.
+The driver accepts only `PIXEL_FORMAT_RGB_565X`: RGB565 pixels with the high
+byte first on the SPI bus. The format is fixed in the driver; no `pixel-format`
+property is needed in the device tree.
 
 ## Tested Hardware
 
 This driver has been developed and tested on the Waveshare 1.5-inch RGB OLED Display Module. You can find more information and purchase the module here.
 
-![Описание изображения](demo/demo.gif)
+![Demo](https://github.com/user-attachments/assets/1df2cd21-0d97-42f2-a18a-506bcc30c2fc)
 
 ## Contributing
 

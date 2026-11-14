@@ -51,7 +51,6 @@ struct ssd1351_config {
 	struct gpio_dt_spec reset;
 
 	enum display_orientation orientation;
-	enum display_pixel_format pixel_format;
 	
 	uint16_t width;
 	uint16_t height;
@@ -66,7 +65,6 @@ struct ssd1351_data {
 	uint8_t bytes_per_pixel;
 
 	enum display_orientation orientation;
-	enum display_pixel_format pixel_format;
 };
 
 #endif /* SSD1351_DISPLAY_DRIVER_H__ */

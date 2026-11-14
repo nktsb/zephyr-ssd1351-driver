@@ -41,26 +41,16 @@ static int ssd1351_mipi_transmit(const struct device* dev, uint8_t cmd,
 }
 
 static int ssd1351_set_remap(const struct device* dev,
-			     enum display_orientation orientation,
-			     enum display_pixel_format pixel_format)
+			     enum display_orientation orientation)
 {
 	const struct ssd1351_config* config = dev->config;
 	struct ssd1351_data* data = dev->data;
 
 	uint8_t remap_mask = 0b00100000;
 
-	switch (pixel_format)
-	{
-		case PIXEL_FORMAT_BGR_565:
-			remap_mask |= 0b01000000;
-			data->bytes_per_pixel = 2;
-			break;
-		case PIXEL_FORMAT_RGB_565:
-		default:
-			remap_mask |= 0b01000100;
-			data->bytes_per_pixel = 2;
-			break;
-	}
+	/* RGB565X: RGB component order, high byte first on the SPI bus. */
+	remap_mask |= 0b01000100;
+	data->bytes_per_pixel = 2;
 
 	switch (orientation)
 	{
@@ -110,7 +100,6 @@ static int ssd1351_set_remap(const struct device* dev,
 			      sizeof(startline));
 
 	data->orientation = orientation;
-	data->pixel_format = pixel_format;
 
 	return 0;
 }
@@ -125,8 +114,7 @@ static const uint8_t ssd1351_grayscale[] = {
 };
 
 static int ssd1351_init_device(const struct device* dev,
-			       enum display_orientation orientation,
-			       enum display_pixel_format pixel_format)
+			       enum display_orientation orientation)
 {
 	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_COMMANDLOCK, 0x12);
 
@@ -138,7 +126,7 @@ static int ssd1351_init_device(const struct device* dev,
 
 	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_DISPLAYOFFSET, 0x00);
 
-	ssd1351_set_remap(dev, orientation, pixel_format);
+	ssd1351_set_remap(dev, orientation);
 
 	ssd1351_mipi_transmit_byte(dev, SSD1351_CMD_SETGPIO, 0x00);
 
@@ -207,7 +195,7 @@ static int ssd1351_write(const struct device* dev, const uint16_t x,
 	ssd1351_mipi_transmit(dev, SSD1351_CMD_WRITERAM, NULL, 0);
 
 	return mipi_dbi_write_display(config->mipi_dbi, &config->dbi_config,
-				      buf, &mipi_desc, data->pixel_format);
+				      buf, &mipi_desc, PIXEL_FORMAT_RGB_565X);
 }
 
 static int ssd1351_set_brightness(const struct device* dev,
@@ -231,10 +219,9 @@ static void ssd1351_get_capabilities(const struct device* dev,
 	capabilities->x_resolution = data->xres;
 	capabilities->y_resolution = data->yres;
 
-	capabilities->supported_pixel_formats = PIXEL_FORMAT_RGB_565 |
-						PIXEL_FORMAT_BGR_565;
+	capabilities->supported_pixel_formats = PIXEL_FORMAT_RGB_565X;
 
-	capabilities->current_pixel_format = data->pixel_format;
+	capabilities->current_pixel_format = PIXEL_FORMAT_RGB_565X;
 
 	capabilities->current_orientation = data->orientation;
 }
@@ -242,9 +229,7 @@ static void ssd1351_get_capabilities(const struct device* dev,
 static int ssd1351_set_orientation(const struct device* dev,
 				   const enum display_orientation orientation)
 {
-	struct ssd1351_data* data = dev->data;
-
-	ssd1351_set_remap(dev, orientation, data->pixel_format);
+	ssd1351_set_remap(dev, orientation);
 
 	return 0;
 }
@@ -253,17 +238,14 @@ static int
 ssd1351_set_pixel_format(const struct device* dev,
 			 const enum display_pixel_format pixel_format)
 {
-	struct ssd1351_data* data = dev->data;
+	ARG_UNUSED(dev);
 
-	if (pixel_format != PIXEL_FORMAT_RGB_565 &&
-	    pixel_format != PIXEL_FORMAT_BGR_565)
+	if (pixel_format != PIXEL_FORMAT_RGB_565X)
 	{
 
 		LOG_ERR("Unsupported pixel format");
 		return -ENOTSUP;
 	}
-
-	ssd1351_set_remap(dev, data->orientation, pixel_format);
 
 	return 0;
 }
@@ -347,7 +329,7 @@ static int ssd1351_init(const struct device* dev)
 
 	ssd1351_reset_display(dev);
 
-	ssd1351_init_device(dev, config->orientation, config->pixel_format);
+	ssd1351_init_device(dev, config->orientation);
 
 	return 0;
 }
@@ -371,7 +353,6 @@ static const struct display_driver_api ssd1351_api = {
 		.height = DT_INST_PROP(inst, height),                          \
 		.width = DT_INST_PROP(inst, width),                            \
 		.orientation = DT_INST_ENUM_IDX(inst, rotation),               \
-		.pixel_format = DT_INST_PROP(inst, pixel_format),              \
 		.data_cmd = GPIO_DT_SPEC_GET_OR(DT_INST_PARENT(inst),          \
 						dc_gpios, {0}),                \
 		.reset = GPIO_DT_SPEC_GET_OR(DT_INST_PARENT(inst),             \
